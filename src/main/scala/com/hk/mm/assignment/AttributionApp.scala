@@ -1,6 +1,8 @@
 package com.hk.mm.assignment
 
-import org.apache.spark.sql.{Encoders, SparkSession}
+import org.apache.spark.sql.expressions.Window
+import org.apache.spark.sql.functions.{count, lag, lit, sum, when}
+import org.apache.spark.sql.{Encoders, SparkSession, functions}
 
 object AttributionApp {
 
@@ -68,6 +70,54 @@ object AttributionApp {
 
     print("impressionsDFCsv count " + impressionsDFCsv.count());
 
+    val maxSessionDuration = 60L
+    val eventWithSessionIds = eventsDFCsv
+      .select('user_id, 'timestamp,
+        lag('timestamp, 1)
+          .over(Window.partitionBy('user_id).orderBy('timestamp))
+          .as('prevTimestamp))
+      .select('user_id, 'timestamp,
+        when('timestamp.minus('prevTimestamp) < lit(maxSessionDuration), lit(0)).otherwise(lit(1))
+          .as('isNewSession))
+      .select('user_id, 'timestamp,
+        sum('isNewSession)
+          .over(Window.partitionBy('user_id).orderBy('user_id, 'timestamp))
+          .as('sessionId))
+
+    eventWithSessionIds.printSchema();
+    eventWithSessionIds.show(100);
+
+    val ds = eventWithSessionIds
+      .groupBy("user_id", "sessionId")
+      .agg(functions.min("timestamp").as("startTime"),
+        functions.max("timestamp").as("endTime"),
+        count("*").as("count"))
+    ds.printSchema()
+    ds.show(100);
+    //
+//    def sessionize(events: Dataset[Event], maxSessionDuration: Long): Dataset[Session] = {
+//
+//
+//      import spark.implicits._
+//
+//      val clicksWithSessionIds = clicks
+//        .select('user_id, 'timestamp,
+//          lag('timestamp, 1)
+//            .over(Window.partitionBy('user_id).orderBy('timestamp))
+//            .as('prevTimestamp))
+//        .select('user_id, 'timestamp,
+//          when('timestamp.minus('prevTimestamp) < lit(maxSessionDuration), lit(0)).otherwise(lit(1))
+//            .as('isNewSession))
+//        .select('user_id, 'timestamp,
+//          sum('isNewSession)
+//            .over(Window.partitionBy('user_id).orderBy('user_id, 'timestamp))
+//            .as('sessionId))
+//
+//      clicksWithSessionIds
+//        .groupBy("user_id", "sessionId")
+//        .agg(min("timestamp").as("startTime"), max("timestamp").as("endTime"), count("*").as("count"))
+//        .as[Session]
+//    }
     // terminate underlying spark context
     sparkSession.stop()
   }
