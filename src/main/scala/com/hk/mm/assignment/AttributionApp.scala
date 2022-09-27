@@ -80,26 +80,6 @@ object AttributionApp {
     eventsWithPrevMinDF.printSchema()
     eventsWithPrevMinDF.show(100, false);
 
-
-    println("-----------Completed-------------")
-
-    sparkSession.stop()
-
-    val w = Window.partitionBy('user_id, 'advertiser_id, 'event_type)
-      .orderBy("timestamp")
-
-    val prevMinimumTimeStamp = MMDedup.toColumn.name("Pre_min")
-    eventsDFCsv
-      .withColumn("Pre_min", prevMinimumTimeStamp.over(w))
-      //                .withColumn("count", functions.max("counter")
-      //                  .over(Window.partitionBy('user_id, 'advertiser_id, 'event_type)))
-      //                 .withColumn("FLG_LAST_WDW",
-      //                   when('counter === 'count,1)
-      //                   .otherwise(lit(0)))
-      .show(false)
-
-
-
     val impressionColNames = classOf[Impression].getDeclaredFields.map(ea => ea.getName)
 
     val impressionsDFCsv = sparkSession
@@ -115,58 +95,8 @@ object AttributionApp {
 
     println("impressionsDFCsv count " + impressionsDFCsv.count());
 
-    val w1 = Window.partitionBy('user_id, 'advertiser_id, 'event_type)
-      .orderBy("timestamp")
-      .rangeBetween(0, 60)
+    println("-----------Completed-------------")
 
-    eventsDFCsv
-      .withColumn("counter", sum(lit(1)).over(w))
-      .withColumn("count", functions.max("counter")
-        .over(Window.partitionBy('user_id, 'advertiser_id, 'event_type)))
-      .withColumn("FLG_LAST_WDW",
-        when('counter === 'count, 1)
-          .otherwise(lit(0))).show(false)
-
-    val eventsCastedDF = eventsDFCsv
-      .withColumn("timestamp_casted", 'timestamp.cast(LongType).cast(TimestampType))
-
-    eventsCastedDF.printSchema()
-    eventsCastedDF.show(100, false)
-
-    val aggDF = eventsDFCsv
-      .groupBy('user_id, window('timestamp_casted, "1 minutes"))
-      .sum("advertiser_id")
-    aggDF.printSchema();
-    aggDF.show(100, false)
-
-
-    //De-duplictaion using sessionization
-    val maxSessionDuration = 60L
-    val eventWithSessionIds = eventsDFCsv
-      .select('user_id, 'advertiser_id, 'event_type, 'timestamp,
-        lag('timestamp, 1)
-          .over(Window.partitionBy('user_id, 'advertiser_id, 'event_type).orderBy('timestamp))
-          .as('prevTimestamp))
-      .select('user_id, 'advertiser_id, 'event_type, 'timestamp,
-        when('timestamp.minus('prevTimestamp) < lit(maxSessionDuration), lit(0)).otherwise(lit(1))
-          .as('isNewSession))
-      .select('user_id, 'advertiser_id, 'event_type, 'timestamp,
-        sum('isNewSession)
-          .over(Window.partitionBy('user_id, 'advertiser_id, 'event_type).orderBy('user_id, 'advertiser_id, 'event_type, 'timestamp))
-          .as('sessionId))
-
-    eventWithSessionIds.printSchema();
-    eventWithSessionIds.show(100, false);
-
-    //    val ds = eventWithSessionIds
-    //      .groupBy("user_id", "sessionId")
-    //      .agg(functions.min("timestamp").as("startTime"),
-    //        functions.max("timestamp").as("endTime"),
-    //        count("*").as("count"))
-    //    ds.printSchema()
-    //    ds.show(100);
-
-    // terminate underlying spark context
     sparkSession.stop()
   }
 
