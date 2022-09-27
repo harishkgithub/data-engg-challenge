@@ -32,6 +32,8 @@ object AttributionApp {
   case class Impression(timestamp: Int, advertiser_id: Int, creative_id: Int, user_id: String)
 
   def main(args: Array[String]): Unit = {
+    val trueValue = true;
+    val falseValue = false;
 
     // initialise spark session (running in "local" mode)
     val sparkSession = SparkSession.builder
@@ -48,52 +50,45 @@ object AttributionApp {
     val eventsDFCsv = sparkSession
       .read
       .option("header", false)
-      .option("inferSchema", true)
+      .option("inferSchema", trueValue)
       .csv("src/resources/events.csv")
       .toDF(eventColNames: _*)
       .as[Event]
 
     eventsDFCsv.printSchema()
-    eventsDFCsv.show(100, true);
+    eventsDFCsv.show(100, trueValue)
 
-    // Create an instance of UDAF GeometricMean.
-    val gm = new PreviousMin
+    println("Deduplication of events within minute to avoid  click on an ad twice by mistake.")
+    // Create an instance of UDAF DeDupMultiEvent.
+    val gm = new DeDupMultiEvent
 
-    // Show the geometric mean of values of column "id".
-//    val opDF = eventsDFCsv
-//      .withColumn("timestamp_casted", 'timestamp.cast(IntegerType))
-//      .groupBy('user_id)
-//      .agg(gm('timestamp_casted).as("PreviousMin"))
-//    println("Schema")
-//    opDF.printSchema()
-//    opDF.show(100,false);
+    val partWindowCondn = Window.partitionBy('user_id, 'advertiser_id, 'event_type)
+      .orderBy("timestamp")
 
-    val eventsWithPrevMinDF1 = eventsDFCsv.groupBy('user_id, 'advertiser_id, 'event_type)
-      .agg(gm('timestamp).as("PreviousMin"))
+    val eventsAfterDedupDF = eventsDFCsv
+      .select('timestamp, 'event_id, 'advertiser_id, 'user_id, 'event_type,
+        gm('timestamp).over(partWindowCondn).as("prev_min_time_in_minute"))
+      .filter('timestamp === 'prev_min_time_in_minute)
+      .drop('prev_min_time_in_minute)
 
-    val eventsWithPrevMinDF = eventsDFCsv
-      .select('user_id, 'advertiser_id, 'event_type,
-        gm('timestamp).over(Window.partitionBy('user_id, 'advertiser_id, 'event_type)
-      .orderBy("timestamp")).as("PreviousMin"),'timestamp)
-
-    println("Schema")
-    eventsWithPrevMinDF.printSchema()
-    eventsWithPrevMinDF.show(100, false);
+    eventsAfterDedupDF.printSchema()
+    eventsAfterDedupDF.show(100, false)
+    println("Deduplication phase complete.")
 
     val impressionColNames = classOf[Impression].getDeclaredFields.map(ea => ea.getName)
 
     val impressionsDFCsv = sparkSession
       .read
-      .option("header", false)
-      .option("inferSchema", true)
+      .option("header", falseValue)
+      .option("inferSchema", trueValue)
       .csv("src/resources/impressions.csv")
       .toDF(impressionColNames: _*)
       .as[Impression]
 
     impressionsDFCsv.printSchema()
-    impressionsDFCsv.show(100, true);
+    impressionsDFCsv.show(100, trueValue)
 
-    println("impressionsDFCsv count " + impressionsDFCsv.count());
+    println("impressionsDFCsv count " + impressionsDFCsv.count())
 
     println("-----------Completed-------------")
 
