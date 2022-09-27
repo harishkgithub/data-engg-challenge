@@ -28,10 +28,6 @@ object AttributionApp {
   //      4 | user_id | string(UUIDv4) | An anonymous user ID this ad was displayed to.
   case class Impression(timestamp: Int, advertiser_id: Int, creative_id: Int, user_id: String)
 
-
-  val productEventEncoder = Encoders.product[Event]
-  val productImpressionEncoder = Encoders.product[Impression]
-
   def main(args: Array[String]): Unit = {
 
     // initialise spark session (running in "local" mode)
