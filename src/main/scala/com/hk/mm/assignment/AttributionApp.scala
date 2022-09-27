@@ -1,7 +1,7 @@
 package com.hk.mm.assignment
 
 import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.functions.{count, first, lag, lit, sum, when, window}
+import org.apache.spark.sql.functions.{count, first, lag, lit, max, rank, sum, when, window}
 import org.apache.spark.sql.types.{IntegerType, LongType, TimestampType}
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders, SparkSession, functions}
 
@@ -121,6 +121,42 @@ object AttributionApp {
         impressionsDS.show(100, trueValue)
       }
 
+      //      The statistics that the application should compute are:
+      //        - The count of attributed events for each advertiser, grouped by event type.
+      //        - The count of unique users that have generated attributed events for each advertiser , grouped by event type.
+
+      val eventsAndImpressionDF = eventsAfterDedupDF
+        .select(lit(0).as("Type"), 'timestamp, 'advertiser_id, 'user_id)
+        .union(impressionsDS.select(lit(1).as("Type"), 'timestamp, 'advertiser_id, 'user_id))
+
+      val markAttributeEventsDF =
+        eventsAndImpressionDF
+          .select('Type, 'timestamp, 'advertiser_id, 'user_id,
+            max('Type).over(Window.partitionBy('user_id, 'advertiser_id)
+              .orderBy("timestamp")).as("impression_occurred"))
+          .filter(('Type === 0).and('impression_occurred === 1))
+
+      markAttributeEventsDF
+        .groupBy('advertiser_id)
+        .agg(count('advertiser_id).as("count_of_events"))
+        .show(false)
+
+      markAttributeEventsDF
+
+      markAttributeEventsDF
+      //      eventsAndImpressionDF.withColumn("impression_flag",
+      //        when('Type === "impression", lit(1))
+      //          .otherwise(lit('0')))
+
+      //      eventsAndImpressionDF
+      //        .select('Type,'timestamp, 'advertiser_id, 'user_id,
+      //          sum('impression_flag).over(Window.partitionBy('user_id, 'advertiser_id)
+      //          .orderBy("timestamp")).as("rank"))
+      //        .show(false)
+
+      //      eventsAndImpressionDF
+      //        .orderBy('timestamp)
+      //        .show(false)
       println("----------------- Attribute analysis completed --------------------------")
       sparkSession.stop()
     } catch {
