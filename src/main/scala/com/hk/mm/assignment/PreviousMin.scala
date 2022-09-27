@@ -49,12 +49,8 @@ class PreviousMin extends UserDefinedAggregateFunction {
   }
 
   // This is where you output the final value, given the final value of your bufferSchema.
-  override def evaluate(buffer: Row): Any = {
-    println("evaluate Before : " + buffer.getInt(0))
-    println("evaluate1 Before : " + buffer(0))
-    buffer(0)
-    println(" evaluate After : " + buffer.getInt(0))
-    println(" evaluate1 After : " + buffer(0))
-    println("--------------------------")
+  override def evaluate(buffer: Row): Integer  = {
+    println("-> evaluate({})", buffer.getInt(0))
+    buffer.getInt(0)
   }
 }

@@ -60,14 +60,30 @@ object AttributionApp {
     val gm = new PreviousMin
 
     // Show the geometric mean of values of column "id".
-    val opDF = eventsDFCsv
-      .withColumn("timestamp_casted", 'timestamp.cast(IntegerType))
-      .groupBy('user_id)
-      .agg(gm('timestamp_casted).as("PreviousMin"))
-    println("Schema")
-    opDF.printSchema()
-    opDF.show(100,false);
+//    val opDF = eventsDFCsv
+//      .withColumn("timestamp_casted", 'timestamp.cast(IntegerType))
+//      .groupBy('user_id)
+//      .agg(gm('timestamp_casted).as("PreviousMin"))
+//    println("Schema")
+//    opDF.printSchema()
+//    opDF.show(100,false);
 
+    val eventsWithPrevMinDF1 = eventsDFCsv.groupBy('user_id, 'advertiser_id, 'event_type)
+      .agg(gm('timestamp).as("PreviousMin"))
+
+    val eventsWithPrevMinDF = eventsDFCsv
+      .select('user_id, 'advertiser_id, 'event_type,
+        gm('timestamp).over(Window.partitionBy('user_id, 'advertiser_id, 'event_type)
+      .orderBy("timestamp")).as("PreviousMin"),'timestamp)
+
+    println("Schema")
+    eventsWithPrevMinDF.printSchema()
+    eventsWithPrevMinDF.show(100, false);
+
+
+    println("-----------Completed-------------")
+
+    sparkSession.stop()
 
     val w = Window.partitionBy('user_id, 'advertiser_id, 'event_type)
       .orderBy("timestamp")
@@ -82,7 +98,6 @@ object AttributionApp {
       //                   .otherwise(lit(0)))
       .show(false)
 
-    //sparkSession.stop()
 
 
     val impressionColNames = classOf[Impression].getDeclaredFields.map(ea => ea.getName)
@@ -118,12 +133,12 @@ object AttributionApp {
     eventsCastedDF.printSchema()
     eventsCastedDF.show(100, false)
 
-    val aggDF = eventsCastedDF
+    val aggDF = eventsDFCsv
       .groupBy('user_id, window('timestamp_casted, "1 minutes"))
       .sum("advertiser_id")
     aggDF.printSchema();
     aggDF.show(100, false)
-    1
+
 
     //De-duplictaion using sessionization
     val maxSessionDuration = 60L
