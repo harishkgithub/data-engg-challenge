@@ -68,56 +68,33 @@ object AttributionApp {
     impressionsDFCsv.printSchema()
     impressionsDFCsv.show(100, true);
 
-    print("impressionsDFCsv count " + impressionsDFCsv.count());
+    println("impressionsDFCsv count " + impressionsDFCsv.count());
 
     val maxSessionDuration = 60L
     val eventWithSessionIds = eventsDFCsv
-      .select('user_id, 'timestamp,
+      .select('user_id,'advertiser_id, 'timestamp,
         lag('timestamp, 1)
           .over(Window.partitionBy('user_id).orderBy('timestamp))
           .as('prevTimestamp))
-      .select('user_id, 'timestamp,
+      .select('user_id,'advertiser_id, 'timestamp,
         when('timestamp.minus('prevTimestamp) < lit(maxSessionDuration), lit(0)).otherwise(lit(1))
           .as('isNewSession))
-      .select('user_id, 'timestamp,
+      .select('user_id,'advertiser_id, 'timestamp,
         sum('isNewSession)
-          .over(Window.partitionBy('user_id).orderBy('user_id, 'timestamp))
+          .over(Window.partitionBy('user_id,'advertiser_id).orderBy('user_id,'advertiser_id, 'timestamp))
           .as('sessionId))
 
     eventWithSessionIds.printSchema();
     eventWithSessionIds.show(100);
 
-    val ds = eventWithSessionIds
-      .groupBy("user_id", "sessionId")
-      .agg(functions.min("timestamp").as("startTime"),
-        functions.max("timestamp").as("endTime"),
-        count("*").as("count"))
-    ds.printSchema()
-    ds.show(100);
-    //
-//    def sessionize(events: Dataset[Event], maxSessionDuration: Long): Dataset[Session] = {
-//
-//
-//      import spark.implicits._
-//
-//      val clicksWithSessionIds = clicks
-//        .select('user_id, 'timestamp,
-//          lag('timestamp, 1)
-//            .over(Window.partitionBy('user_id).orderBy('timestamp))
-//            .as('prevTimestamp))
-//        .select('user_id, 'timestamp,
-//          when('timestamp.minus('prevTimestamp) < lit(maxSessionDuration), lit(0)).otherwise(lit(1))
-//            .as('isNewSession))
-//        .select('user_id, 'timestamp,
-//          sum('isNewSession)
-//            .over(Window.partitionBy('user_id).orderBy('user_id, 'timestamp))
-//            .as('sessionId))
-//
-//      clicksWithSessionIds
-//        .groupBy("user_id", "sessionId")
-//        .agg(min("timestamp").as("startTime"), max("timestamp").as("endTime"), count("*").as("count"))
-//        .as[Session]
-//    }
+//    val ds = eventWithSessionIds
+//      .groupBy("user_id", "sessionId")
+//      .agg(functions.min("timestamp").as("startTime"),
+//        functions.max("timestamp").as("endTime"),
+//        count("*").as("count"))
+//    ds.printSchema()
+//    ds.show(100);
+
     // terminate underlying spark context
     sparkSession.stop()
   }
