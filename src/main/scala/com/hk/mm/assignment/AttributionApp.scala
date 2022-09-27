@@ -72,20 +72,20 @@ object AttributionApp {
 
     val maxSessionDuration = 60L
     val eventWithSessionIds = eventsDFCsv
-      .select('user_id,'advertiser_id, 'timestamp,
+      .select('user_id,'advertiser_id,'event_type, 'timestamp,
         lag('timestamp, 1)
-          .over(Window.partitionBy('user_id).orderBy('timestamp))
+          .over(Window.partitionBy('user_id,'advertiser_id,'event_type).orderBy('timestamp))
           .as('prevTimestamp))
-      .select('user_id,'advertiser_id, 'timestamp,
+      .select('user_id,'advertiser_id,'event_type, 'timestamp,
         when('timestamp.minus('prevTimestamp) < lit(maxSessionDuration), lit(0)).otherwise(lit(1))
           .as('isNewSession))
-      .select('user_id,'advertiser_id, 'timestamp,
+      .select('user_id,'advertiser_id,'event_type, 'timestamp,
         sum('isNewSession)
-          .over(Window.partitionBy('user_id,'advertiser_id).orderBy('user_id,'advertiser_id, 'timestamp))
+          .over(Window.partitionBy('user_id,'advertiser_id,'event_type).orderBy('user_id,'advertiser_id,'event_type, 'timestamp))
           .as('sessionId))
 
     eventWithSessionIds.printSchema();
-    eventWithSessionIds.show(100);
+    eventWithSessionIds.show(100,false);
 
 //    val ds = eventWithSessionIds
 //      .groupBy("user_id", "sessionId")
