@@ -50,6 +50,7 @@ object AttributionApp {
       val falseValue = false
       var eventsPath = "src/resources/events.csv"
       var impressionsPath = "src/resources/impressions.csv"
+      var countOfEventsOutputPath="src/resources/count_of_events.csv"
 
       if (args != null && args.length >= 2) {
         eventsPath = args(0)
@@ -141,7 +142,7 @@ object AttributionApp {
 
       val markAttributeEventsDF =
         eventsAndImpressionDF
-          .select('Type, 'timestamp, 'advertiser_id, 'user_id,'event_type,
+          .select('Type, 'timestamp, 'advertiser_id, 'user_id, 'event_type,
             max('Type).over(Window.partitionBy('user_id, 'advertiser_id)
               .orderBy("timestamp")).as("impression_occurred"))
           .filter(('Type === 0).and('impression_occurred === 1))
@@ -163,6 +164,8 @@ object AttributionApp {
         println(s" The count of attributed events dataset count : ${attributedEventsByAdvertiserDF.count()}")
         attributedEventsByAdvertiserDF.show(100, trueValue)
       }
+      attributedEventsByAdvertiserDF.coalesce(1).write.csv(countOfEventsOutputPath)
+
 
       println("----------------- Attribute analysis completed --------------------------")
       sparkSession.stop()
@@ -170,7 +173,6 @@ object AttributionApp {
       case genEx: Exception =>
         println("Exception while running application.")
         genEx.printStackTrace()
-
     }
   }
 }
