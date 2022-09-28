@@ -39,5 +39,6 @@ set /p count_of_events=Please enter output count of_events.csv path:
 
 :EXECUTE
 e:spark-submit --class com.hk.mm.assignment.AttributionApp --master local[1] %~dp0\..\..\..\target\scala-2.12\data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar %events_path% %impressions_path% %count_of_events%
+echo "completed!!!"
 :EXIT
 pause
