@@ -60,7 +60,7 @@ object AttributionApp {
       var impressionsPath = ""
       var countOfEventsOutputPath = ""
 
-
+      println("Parsing input parameters")
       if (args.isEmpty || args.length < 3) {
         println(args.length)
         println(args.mkString(" "))
