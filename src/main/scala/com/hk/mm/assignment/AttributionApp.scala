@@ -40,7 +40,7 @@ object AttributionApp {
 
   def main(args: Array[String]): Unit = {
     try {
-      var debugMode = false
+      var debugMode = true
       val trueValue = true
       val falseValue = false
       var eventsPath = "src/resources/events.csv"
@@ -128,6 +128,13 @@ object AttributionApp {
       val eventsAndImpressionDF = eventsAfterDedupDF
         .select(lit(0).as("Type"), 'timestamp, 'advertiser_id, 'user_id)
         .union(impressionsDS.select(lit(1).as("Type"), 'timestamp, 'advertiser_id, 'user_id))
+      eventsAndImpressionDF.show(100,falseValue)
+
+      eventsAndImpressionDF
+        .select('Type, 'timestamp, 'advertiser_id, 'user_id,
+          max('Type).over(Window.partitionBy('user_id, 'advertiser_id)
+            .orderBy("timestamp")).as("impression_occurred"))
+        .show(false)
 
       val markAttributeEventsDF =
         eventsAndImpressionDF
