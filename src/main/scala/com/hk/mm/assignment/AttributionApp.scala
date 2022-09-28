@@ -7,6 +7,11 @@ import org.apache.spark.sql.{DataFrame, Dataset, Encoders, SparkSession, functio
 
 import scala.util.Try
 
+/**
+ * The statistics that the application should compute are:
+ * The count of attributed events for each advertiser, grouped by event type.
+ * The count of unique users that have generated attributed events for each advertiser , grouped by event type.
+ */
 object AttributionApp {
 
   //    ### Events
@@ -121,20 +126,11 @@ object AttributionApp {
         impressionsDS.show(100, trueValue)
       }
 
-      //      The statistics that the application should compute are:
       //        - The count of attributed events for each advertiser, grouped by event type.
-      //        - The count of unique users that have generated attributed events for each advertiser , grouped by event type.
-
       val eventsAndImpressionDF = eventsAfterDedupDF
         .select(lit(0).as("Type"), 'timestamp, 'advertiser_id, 'user_id)
         .union(impressionsDS.select(lit(1).as("Type"), 'timestamp, 'advertiser_id, 'user_id))
-      eventsAndImpressionDF.show(100,falseValue)
-
-      eventsAndImpressionDF
-        .select('Type, 'timestamp, 'advertiser_id, 'user_id,
-          max('Type).over(Window.partitionBy('user_id, 'advertiser_id)
-            .orderBy("timestamp")).as("impression_occurred"))
-        .show(false)
+      eventsAndImpressionDF.show(100, falseValue)
 
       val markAttributeEventsDF =
         eventsAndImpressionDF
@@ -143,31 +139,24 @@ object AttributionApp {
               .orderBy("timestamp")).as("impression_occurred"))
           .filter(('Type === 0).and('impression_occurred === 1))
 
-      markAttributeEventsDF.show(false)
+      if (debugMode) {
+        markAttributeEventsDF.printSchema()
+        println(s"Marked attribute events count : ${markAttributeEventsDF.count()}")
+        markAttributeEventsDF.show(100, trueValue)
+      }
 
-      markAttributeEventsDF
-        .groupBy('advertiser_id,'user_id)
+      val attributedEventsByAdvertiserDF = markAttributeEventsDF
+        .groupBy('advertiser_id, 'user_id)
         .agg(max('impression_occurred))
         .groupBy('advertiser_id)
         .agg(count('advertiser_id).as("count_of_events"))
-        .show(false)
 
-      markAttributeEventsDF
+      if (debugMode) {
+        attributedEventsByAdvertiserDF.printSchema()
+        println(s" The count of attributed events dataset count : ${attributedEventsByAdvertiserDF.count()}")
+        attributedEventsByAdvertiserDF.show(100, trueValue)
+      }
 
-      markAttributeEventsDF
-      //      eventsAndImpressionDF.withColumn("impression_flag",
-      //        when('Type === "impression", lit(1))
-      //          .otherwise(lit('0')))
-
-      //      eventsAndImpressionDF
-      //        .select('Type,'timestamp, 'advertiser_id, 'user_id,
-      //          sum('impression_flag).over(Window.partitionBy('user_id, 'advertiser_id)
-      //          .orderBy("timestamp")).as("rank"))
-      //        .show(false)
-
-      //      eventsAndImpressionDF
-      //        .orderBy('timestamp)
-      //        .show(false)
       println("----------------- Attribute analysis completed --------------------------")
       sparkSession.stop()
     } catch {
