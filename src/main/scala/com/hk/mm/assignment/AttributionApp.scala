@@ -1,7 +1,7 @@
 package com.hk.mm.assignment
 
 import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.functions.{count, first, lag, lit, max, rank, sum, when, window}
+import org.apache.spark.sql.functions.{count, countDistinct, first, lag, lit, max, rank, sum, when, window}
 import org.apache.spark.sql.types.{IntegerType, LongType, TimestampType}
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders, SparkSession, functions}
 
@@ -143,7 +143,11 @@ object AttributionApp {
               .orderBy("timestamp")).as("impression_occurred"))
           .filter(('Type === 0).and('impression_occurred === 1))
 
+      markAttributeEventsDF.show(false)
+
       markAttributeEventsDF
+        .groupBy('advertiser_id,'user_id)
+        .agg(max('impression_occurred))
         .groupBy('advertiser_id)
         .agg(count('advertiser_id).as("count_of_events"))
         .show(false)
