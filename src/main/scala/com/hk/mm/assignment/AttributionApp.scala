@@ -62,6 +62,7 @@ object AttributionApp {
 
 
       if (args.isEmpty || args.length < 3) {
+        println(args.length)
         println(args.mkString(" "))
         throw new MMInvalidParameterException("missing input arguments ")
       } else {
@@ -198,7 +199,7 @@ object AttributionApp {
         attributedEventsByAdvertiserDF
           .write
           .mode(SaveMode.Overwrite)
-          .option("header", true)
+          .option("header", trueValue)
           .csv(countOfEventsOutputPath)
 
         println("----------------- Attribute analysis completed --------------------------")
