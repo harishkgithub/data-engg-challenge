@@ -127,14 +127,21 @@ object AttributionApp {
       }
 
       //        - The count of attributed events for each advertiser, grouped by event type.
+
       val eventsAndImpressionDF = eventsAfterDedupDF
-        .select(lit(0).as("Type"), 'timestamp, 'advertiser_id, 'user_id)
-        .union(impressionsDS.select(lit(1).as("Type"), 'timestamp, 'advertiser_id, 'user_id))
-      eventsAndImpressionDF.show(100, falseValue)
+        .select(lit(0).as("Type"), 'timestamp, 'advertiser_id, 'user_id,'event_type)
+        .union(impressionsDS.select(lit(1).as("Type"), 'timestamp, 'advertiser_id,
+          'user_id,lit("NA").as('event_type)))
+
+      if (debugMode) {
+        eventsAndImpressionDF.printSchema()
+        println(s"Events and impressions combined count : ${eventsAndImpressionDF.count()}")
+        eventsAndImpressionDF.show(100, falseValue)
+      }
 
       val markAttributeEventsDF =
         eventsAndImpressionDF
-          .select('Type, 'timestamp, 'advertiser_id, 'user_id,
+          .select('Type, 'timestamp, 'advertiser_id, 'user_id,'event_type,
             max('Type).over(Window.partitionBy('user_id, 'advertiser_id)
               .orderBy("timestamp")).as("impression_occurred"))
           .filter(('Type === 0).and('impression_occurred === 1))
@@ -146,9 +153,9 @@ object AttributionApp {
       }
 
       val attributedEventsByAdvertiserDF = markAttributeEventsDF
-        .groupBy('advertiser_id, 'user_id)
+        .groupBy('advertiser_id, 'user_id,'event_type)
         .agg(max('impression_occurred))
-        .groupBy('advertiser_id)
+        .groupBy('advertiser_id,'event_type)
         .agg(count('advertiser_id).as("count_of_events"))
 
       if (debugMode) {
