@@ -4,6 +4,7 @@ import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions.{count, countDistinct, first, lag, lit, max, rank, sum, when, window}
 import org.apache.spark.sql.types.{IntegerType, LongType, TimestampType}
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders, SparkSession, functions}
+import org.apache.spark.sql.SaveMode
 
 import scala.util.Try
 
@@ -45,12 +46,12 @@ object AttributionApp {
 
   def main(args: Array[String]): Unit = {
     try {
-      var debugMode = true
+      var debugMode = false
       val trueValue = true
       val falseValue = false
       var eventsPath = "src/resources/events.csv"
       var impressionsPath = "src/resources/impressions.csv"
-      var countOfEventsOutputPath="src/resources/count_of_events.csv"
+      var countOfEventsOutputPath = "src/resources/count_of_events.csv"
 
       if (args != null && args.length >= 2) {
         eventsPath = args(0)
@@ -130,9 +131,9 @@ object AttributionApp {
       //        - The count of attributed events for each advertiser, grouped by event type.
 
       val eventsAndImpressionDF = eventsAfterDedupDF
-        .select(lit(0).as("Type"), 'timestamp, 'advertiser_id, 'user_id,'event_type)
+        .select(lit(0).as("Type"), 'timestamp, 'advertiser_id, 'user_id, 'event_type)
         .union(impressionsDS.select(lit(1).as("Type"), 'timestamp, 'advertiser_id,
-          'user_id,lit("NA").as('event_type)))
+          'user_id, lit("NA").as('event_type)))
 
       if (debugMode) {
         eventsAndImpressionDF.printSchema()
@@ -154,18 +155,23 @@ object AttributionApp {
       }
 
       val attributedEventsByAdvertiserDF = markAttributeEventsDF
-        .groupBy('advertiser_id, 'user_id,'event_type)
+        .groupBy('advertiser_id, 'user_id, 'event_type)
         .agg(max('impression_occurred))
-        .groupBy('advertiser_id,'event_type)
+        .groupBy('advertiser_id, 'event_type)
         .agg(count('advertiser_id).as("count_of_events"))
 
       if (debugMode) {
         attributedEventsByAdvertiserDF.printSchema()
         println(s" The count of attributed events dataset count : ${attributedEventsByAdvertiserDF.count()}")
-        attributedEventsByAdvertiserDF.show(100, trueValue)
       }
-      attributedEventsByAdvertiserDF.coalesce(1).write.csv(countOfEventsOutputPath)
+      attributedEventsByAdvertiserDF.show(100, trueValue)
 
+
+      attributedEventsByAdvertiserDF
+        .write
+        .mode(SaveMode.Overwrite)
+        .option("header", true)
+        .csv(countOfEventsOutputPath)
 
       println("----------------- Attribute analysis completed --------------------------")
       sparkSession.stop()
