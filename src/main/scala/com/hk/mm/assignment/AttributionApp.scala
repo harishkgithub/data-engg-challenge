@@ -179,6 +179,7 @@ object AttributionApp {
           eventsAndImpressionDF.show(100, falseValue)
         }
 
+        println("Marking/identifying attributed events")
         /* Mark events which are attributed i.e.,
         *  - Attributed event: an event that happened chronologically after an impression and is considered to be
         * the result of that impression. The advertiser and the user of both the impression and the event
@@ -197,8 +198,10 @@ object AttributionApp {
           markAttributeEventsDF.show(100, trueValue)
         }
 
+        println("Caching attributed events")
         markAttributeEventsDF.persist()
 
+        println("Generate stats :  The count of attributed events for each advertiser, grouped by event type")
         val attributedEventsByAdvertiserDF = markAttributeEventsDF
           .groupBy('advertiser_id, 'event_type)
           .agg(count('advertiser_id).as("count_of_events"))
@@ -209,6 +212,7 @@ object AttributionApp {
         }
         attributedEventsByAdvertiserDF.show()
 
+        println("Storing :  The count of attributed events for each advertiser, grouped by event type")
         attributedEventsByAdvertiserDF
           .write
           .mode(SaveMode.Overwrite)
@@ -216,7 +220,7 @@ object AttributionApp {
           .csv(countOfEventsOutputPath)
 
         // - The count of unique users that have generated attributed events for each advertiser, grouped by event type.
-
+        println("Generate stats :  The count of unique users that have generated attributed events for each advertiser, grouped by event type.")
         val attributedUniqueUsersByAdvertiserDF = markAttributeEventsDF
           .groupBy('advertiser_id, 'user_id, 'event_type)
           .agg(lit(1).as("unique_user_event_type"))
@@ -230,13 +234,14 @@ object AttributionApp {
         }
         attributedUniqueUsersByAdvertiserDF.show()
 
+        println("Storing :   The count of unique users that have generated attributed events for each advertiser, grouped by event type.")
         attributedUniqueUsersByAdvertiserDF
           .write
           .mode(SaveMode.Overwrite)
           .option("header", trueValue)
           .csv(countOfUniqueUsersOutputPath)
 
-        println("----------------- Attribute analysis completed --------------------------")
+        println("----------------- Attribute analysis completed!!! --------------------------")
         sparkSession.stop()
       }
     } catch {
