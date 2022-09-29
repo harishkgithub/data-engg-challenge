@@ -9,11 +9,13 @@ set SPARK_LIB_PATH=%SPARK_HOME%\jars
 set events_path=%1
 set impressions_path=%2
 set count_of_events=%3
+set count_of_users=%4
 set tmp_count_of_events=%~dp0\tmp_count_of_events
+set tmp_count_of_users=%~dp0\tmp_count_of_users
 
 :EXECUTE
-echo e:spark-submit --class com.hk.mm.assignment.AttributionApp --master local[1] %~dp0\..\..\..\target\scala-2.12\data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar %events_path% %impressions_path% %count_of_events%
+echo e:spark-submit --class com.hk.mm.assignment.AttributionApp --master local[1] %~dp0\..\..\..\target\scala-2.12\data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar %events_path% %impressions_path% %tmp_count_of_events% %tmp_count_of_users%
 echo ......
-e:spark-submit --class com.hk.mm.assignment.AttributionApp --master local[1] %~dp0\..\..\..\target\scala-2.12\data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar %events_path% %impressions_path% %tmp_count_of_events%
+e:spark-submit --class com.hk.mm.assignment.AttributionApp --master local[1] %~dp0\..\..\..\target\scala-2.12\data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar %events_path% %impressions_path% %tmp_count_of_events% %tmp_count_of_users%
 :EXIT
 pause

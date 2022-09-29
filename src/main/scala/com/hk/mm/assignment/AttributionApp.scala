@@ -102,7 +102,7 @@ object AttributionApp {
 
         // initialise spark session (running in "local" mode)
         val sparkSession = SparkSession.builder
-          .master("local")
+          //.master("local")  //uncomment while running in IDE
           .appName("AttributeApp")
           .getOrCreate()
         sparkSession.conf.set("spark.sql.shuffle.partitions", 500)
