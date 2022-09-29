@@ -48,3 +48,10 @@ Press 'Y' if prompted for input
 sbt 1.7.1 
 Java 1.8.0_341
 Windows 10
+
+
+# Additional context:
+Test run :2
+RunAttribute.bat E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\events.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\impressions.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\count_of_events.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\count_of_users.csv
+
+PostProcessing.bat E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\count_of_events.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\count_of_users.csv
