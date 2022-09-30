@@ -1,9 +1,10 @@
 package com.hk.mm.assignment;
 
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.FunSuite
-
-class AttributionAppTest /*extends FunSuite with BeforeAndAfterAll*/ {
+import org.apache.spark.sql.SparkSession;
+import org.scalatest.BeforeAndAfterAll;
+import org.scalatest.FunSuite;
+import com.hk.mm.assignment.AttributionApp.{loadEventsDS, loadImpressionsDS}
+    class AttributionAppTest extends FunSuite with BeforeAndAfterAll {
 
     @transient var spark:SparkSession = _
 
@@ -19,9 +20,11 @@ class AttributionAppTest /*extends FunSuite with BeforeAndAfterAll*/ {
     }
 
     test("Data File Loading") {
-        val eventsDF = loadSurveyDF(spark, "src/test/data/events.csv")
+        val eventsDF = loadEventsDS(spark, "src/test/data/events.csv",)
         val eventsCount = eventsDF.count()
-        assert (eventsCount == 9," record count should be 9")
+
+        val eventColNames = classOf[Event].getDeclaredFields.map(ea => ea.getName)
+        assert (eventsCount == 9," record count should be 9",eventColNames)
     }
 
 }
