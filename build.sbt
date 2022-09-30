@@ -6,7 +6,16 @@ lazy val root = (project in file("."))
   .settings(
     name := "data-engg-challenge"
   )
-libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "3.3.0",
-  "org.apache.spark" %% "spark-sql" % "3.3.0"
+
+val sparkVersion = "3.3.0"
+
+val sparkDependencies = Seq(
+  "org.apache.spark" %% "spark-core" % sparkVersion,
+  "org.apache.spark" %% "spark-sql" % sparkVersion
 )
+
+val testDependencies = Seq(
+  "org.scalatest" %% "scalatest" % "3.0.8" % Test
+)
+
+libraryDependencies ++= sparkDependencies ++ testDependencies
