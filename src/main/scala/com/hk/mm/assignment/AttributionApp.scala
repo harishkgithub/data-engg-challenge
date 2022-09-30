@@ -1,9 +1,12 @@
 package com.hk.mm.assignment
 
 import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.functions.{count, countDistinct, first, lag, lit, max, rank, sum, when, window}
+import org.apache.spark.sql.functions.{count, countDistinct, first, lag, lit, max, rank, sum, udaf, when, window}
 import org.apache.spark.sql.types.{IntegerType, LongType, TimestampType}
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders, SparkSession, functions}
+import org.apache.spark.sql.Encoder
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
+import org.apache.spark.sql.expressions.Aggregator
 import org.apache.spark.sql.SaveMode
 
 import scala.util.Try
@@ -14,6 +17,7 @@ import scala.util.Try
  * The count of unique users that have generated attributed events for each advertiser , grouped by event type.
  */
 object AttributionApp {
+  val AGG_TIME_TO_DISCARD_IN_SEC = 60
 
   //    ### Events
   //      This dataset contains a series of interactions of users with brands: events.csv
@@ -102,7 +106,7 @@ object AttributionApp {
 
         // initialise spark session (running in "local" mode)
         val sparkSession = SparkSession.builder
-          //.master("local")  //uncomment while running in IDE
+          .master("local") //uncomment while running in IDE
           .appName("AttributeApp")
           .getOrCreate()
         sparkSession.conf.set("spark.sql.shuffle.partitions", 500)
@@ -130,16 +134,112 @@ object AttributionApp {
 
         println("Deduplication of events within minute to avoid click on an ad twice by mistake.")
         // Create an instance of UDAF DeDupMultiEvent.
+
         val gm = new DeDupMultiEvent
+
+        //        val meanAgg = new Aggregator[Event, (Long, Long), Double]() {
+        //
+        //          def zero = (0L, 0L) // Init the buffer
+        //
+        //          def reduce(y: (Int, Int), x: Long) = {
+        //
+        //            if (y._2 == 0) {
+        //              y._2
+        //            } else if ((y._2 - y._1) > AGG_TIME_TO_DISCARD_IN_SEC) {
+        //              y._2
+        //            }
+        //
+        //          }
+        //
+        //          def merge(a: (Long, Long), b: (Long, Long)) = (a._1 + b._1, a._2 + b._2)
+        //
+        //          def finish(r: (Long, Long)) = r._1.toDouble / r._2
+        //
+        //          def bufferEncoder: Encoder[(Long, Long)] = implicitly(ExpressionEncoder[(Long, Long)])
+        //
+        //          def outputEncoder: Encoder[Double] = implicitly(ExpressionEncoder[Double])
+        //        }
+        //
+        //        val dedupUdaf = udaf(meanAgg)
+
+
+        //        case class Data(i: Int)
+        //
+        //        val customSummer = new Aggregator[Data, Int, Int] {
+        //          def zero: Int = 0
+        //
+        //          def reduce(b: Int, a: Data): Int = b + a.i
+        //
+        //          def merge(b1: Int, b2: Int): Int = b1 + b2
+        //
+        //          def finish(r: Int): Int = r
+        //
+        //          def bufferEncoder: Encoder[Int] = Encoders.scalaInt
+        //
+        //          def outputEncoder: Encoder[Int] = Encoders.scalaInt
+        //        }.toColumn()
+        //
+        //        val ds: Dataset[Data] =
+        //        ...
+        //        val aggregated = ds.select(customSummer)
+
+
+        val preMinTimeInMinuteWindow = new Aggregator[Event, Int, Int] {
+          def zero: Int = {
+            val retValue = Int.MinValue
+            println("Zero : " + retValue)
+            retValue
+          }
+
+          def reduce(b: Int, a: Event): Int = {
+            var retValue: Int = b
+            if (b == 0) {
+              retValue = a.timestamp
+            } else if ((a.timestamp - b) > AGG_TIME_TO_DISCARD_IN_SEC) {
+              retValue = a.timestamp
+            }
+            println("reduce : " + retValue)
+            retValue
+          }
+
+          def merge(b1: Int, b2: Int): Int = {
+            var retValue: Int = b1
+            if ((b2 - b1) > AGG_TIME_TO_DISCARD_IN_SEC) {
+              retValue = b2
+            }
+            println("merge : " + retValue)
+            retValue
+          }
+
+          def finish(r: Int): Int = {
+            println("merge : " + r)
+            r
+          }
+
+          def bufferEncoder: Encoder[Int] = Encoders.scalaInt
+
+          def outputEncoder: Encoder[Int] = Encoders.scalaInt
+        }.toColumn()
 
         val partWindowCondn = Window.partitionBy('user_id, 'advertiser_id, 'event_type)
           .orderBy("timestamp")
+
+        val preMinTimeInMinuteWindowAgg = eventsDS
+          .select('timestamp, 'event_id, 'advertiser_id, 'user_id, 'event_type,
+            preMinTimeInMinuteWindow.over(partWindowCondn).as("prev_min_time_in_minute"))
+          .filter('timestamp === 'prev_min_time_in_minute)
+        //.drop('prev_min_time_in_minute)
+        println("preMinTimeInMinuteWindowAgg")
+        preMinTimeInMinuteWindowAgg.show(100, false)
 
         val eventsAfterDedupDF = eventsDS
           .select('timestamp, 'event_id, 'advertiser_id, 'user_id, 'event_type,
             gm('timestamp).over(partWindowCondn).as("prev_min_time_in_minute"))
           .filter('timestamp === 'prev_min_time_in_minute)
-          .drop('prev_min_time_in_minute)
+        //.drop('prev_min_time_in_minute)
+
+        println("eventsAfterDedupDF")
+        eventsAfterDedupDF.show(100, false)
 
         if (debugMode) {
           eventsAfterDedupDF.printSchema()
