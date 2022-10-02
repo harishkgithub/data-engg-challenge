@@ -140,7 +140,7 @@ object AttributionApp extends Serializable {
     import sparkSession.implicits._
     markAttributeEventsDF
       .groupBy('advertiser_id, 'event_type)
-      .agg(count('advertiser_id).as("count_of_events"))
+      .agg(count('advertiser_id).as("count"))
   }
 
   def calculateCountOfUniqueEvents(sparkSession: SparkSession,
@@ -150,7 +150,7 @@ object AttributionApp extends Serializable {
       .groupBy('advertiser_id, 'user_id, 'event_type)
       .agg(lit(1).as("unique_user_event_type"))
       .groupBy('advertiser_id, 'event_type)
-      .agg(count('unique_user_event_type).as("count_of_unique_users"))
+      .agg(count('unique_user_event_type).as("count"))
 
   }
 
