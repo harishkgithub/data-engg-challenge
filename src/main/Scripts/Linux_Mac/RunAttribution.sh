@@ -17,8 +17,6 @@ else
 fi
 
 echo "Simple attribution application that produces a report!!"
-echo $JAVA_HOME
-JAVA_HOME="/C/Users/kumard/.jdks/corretto-1.8.0_342"
 
 echo spark-submit --class com.hk.mm.assignment.AttributionApp --master local[1] \
 ../../../target/scala-2.12/data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar $events_path $impressions_path $tmp_count_of_events $tmp_count_of_users
