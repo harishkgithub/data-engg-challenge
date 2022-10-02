@@ -22,6 +22,8 @@ object AttributionApp extends Serializable {
   val falseValue = false
   var debugMode = false
 
+  var sparkConfFilePath = ""
+
   //    ### Events
   //      This dataset contains a series of interactions of users with brands: events.csv
   //    ** Schema :**
@@ -180,11 +182,13 @@ object AttributionApp extends Serializable {
       var impressionsPath = ""
       var countOfEventsOutputPath = ""
       var countOfUniqueUsersOutputPath = ""
+      sparkConfFilePath = ""
 
       println("Parsing input parameters")
+      println(args.length)
+      println(args.mkString(" "))
+
       if (args.isEmpty || args.length < 4) {
-        println(args.length)
-        println(args.mkString(" "))
         throw new MMInvalidParameterException("missing input arguments ")
       } else {
 
@@ -192,8 +196,13 @@ object AttributionApp extends Serializable {
         impressionsPath = args(1)
         countOfEventsOutputPath = args(2)
         countOfUniqueUsersOutputPath = args(3)
+
         if (args.length >= 5) {
-          debugMode = Try(args(4).toBoolean).getOrElse(false)
+          sparkConfFilePath = args(5)
+        }
+
+        if (args.length >= 6) {
+          debugMode = Try(args(6).toBoolean).getOrElse(false)
         }
 
         if (eventsPath.isEmpty) {
@@ -223,7 +232,7 @@ object AttributionApp extends Serializable {
         // initialise spark session
         logger.info("Starting Attribution App")
         val sparkSession = SparkSession.builder()
-          .config(getSparkAppConf)
+          //.config(getSparkAppConf)
           .getOrCreate()
 
         sparkSession.sparkContext.setLogLevel("ERROR")
@@ -298,13 +307,13 @@ object AttributionApp extends Serializable {
     }
   }
 
-  def getSparkAppConf: SparkConf = {
-    val sparkAppConf = new SparkConf
-    //Set all Spark Configs
-    val props = new Properties
-    props.load(Source.fromFile("spark.conf").bufferedReader())
-    props.forEach((k, v) => sparkAppConf.set(k.toString, v.toString))
-    sparkAppConf
-  }
+  //  def getSparkAppConf: SparkConf = {
+  //    val sparkAppConf = new SparkConf
+  //    //Set all Spark Configs
+  //    val props = new Properties
+  //    props.load(Source.fromFile(sparkConf).bufferedReader())
+  //    props.forEach((k, v) => sparkAppConf.set(k.toString, v.toString))
+  //    sparkAppConf
+  //  }
 }
 
