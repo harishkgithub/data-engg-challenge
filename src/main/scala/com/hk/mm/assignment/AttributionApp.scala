@@ -3,10 +3,8 @@ package com.hk.mm.assignment
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.functions.{count, countDistinct, first, lag, lit, max, rank, sum, when, window}
-import org.apache.spark.sql.types.{IntegerType, LongType, TimestampType}
-import org.apache.spark.sql.{DataFrame, Dataset, Encoders, SparkSession, functions}
-import org.apache.spark.sql.SaveMode
+import org.apache.spark.sql.functions.{count, lit, max}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SaveMode, SparkSession}
 
 import java.util.Properties
 import scala.util.Try
@@ -17,11 +15,12 @@ import scala.io.Source
  * The count of attributed events for each advertiser, grouped by event type.
  * The count of unique users that have generated attributed events for each advertiser , grouped by event type.
  */
-object AttributionApp {
+object AttributionApp extends Serializable {
 
   @transient lazy val logger: Logger = Logger.getLogger(getClass.getName)
   val trueValue = true
   val falseValue = false
+  var debugMode = false
 
   //    ### Events
   //      This dataset contains a series of interactions of users with brands: events.csv
@@ -49,9 +48,17 @@ object AttributionApp {
 
   class MMInvalidParameterException(s: String) extends Exception(s) {}
 
-  def displayData(df: Dataset[AnyRef], size: Int = 100, truncate: Boolean = false): Unit = {
-    df.printSchema()
-    df.show(size, truncate)
+  //  def genericExec[T](query: String)(implicit rconv: GetResult[T]) : List[T] = ...
+
+  def displayData[T](df: Dataset[T],
+                     desc: String,
+                     size: Int = 100,
+                     truncate: Boolean = false): Unit = {
+    if (debugMode) {
+      df.printSchema()
+      println(s"$desc: ${df.count()}")
+      df.show(size, truncate)
+    }
   }
 
   def usage(errorMsg: String = ""): Unit = {
@@ -61,7 +68,7 @@ object AttributionApp {
 
   def loadEventsDS(sparkSession: SparkSession,
                    eventsPath: String,
-                   eventColNames: Array[String]) = {
+                   eventColNames: Array[String]): Dataset[Event] = {
     import sparkSession.implicits._
     sparkSession.read.option("header", falseValue)
       .option("inferSchema", trueValue)
@@ -70,8 +77,21 @@ object AttributionApp {
       .as[Event]
   }
 
+  def loadImpressionsDS(sparkSession: SparkSession,
+                        impressionsPath: String,
+                        impressionColNames: Array[String]): Dataset[Impression] = {
+    import sparkSession.implicits._
+    sparkSession
+      .read
+      .option("header", falseValue)
+      .option("inferSchema", trueValue)
+      .csv(impressionsPath)
+      .toDF(impressionColNames: _*)
+      .as[Impression]
+  }
+
   def dedupEventsDS(sparkSession: SparkSession,
-                    eventsDS: Dataset[Event]) = {
+                    eventsDS: Dataset[Event]): DataFrame = {
     import sparkSession.implicits._
     // Create an instance of UDAF DeDupMultiEvent.
     val gm = new DeDupMultiEvent
@@ -86,20 +106,75 @@ object AttributionApp {
       .drop('prev_min_time_in_minute)
   }
 
-  def loadImpressionsDS(sparkSession: SparkSession, impressionsPath: String, impressionColNames: Array[String]) = {
+  def fetchAttributeEvents(sparkSession: SparkSession,
+                           eventsAfterDedupDF: DataFrame,
+                           impressionsDS: Dataset[Impression]): Dataset[Row] = {
     import sparkSession.implicits._
-    sparkSession
-      .read
-      .option("header", falseValue)
-      .option("inferSchema", trueValue)
-      .csv(impressionsPath)
-      .toDF(impressionColNames: _*)
-      .as[Impression]
+    val eventsAndImpressionDF = eventsAfterDedupDF
+      .select(lit(0).as("Type"), 'timestamp, 'advertiser_id, 'user_id, 'event_type)
+      .union(impressionsDS.select(lit(1).as("Type"), 'timestamp, 'advertiser_id,
+        'user_id, lit("NA").as('event_type)))
+
+    if (debugMode) {
+      eventsAndImpressionDF.printSchema()
+      println(s"Events and impressions combined count : ${eventsAndImpressionDF.count()}")
+      eventsAndImpressionDF.show(100, falseValue)
+    }
+
+    println("Marking/identifying attributed events")
+    /* Mark events which are attributed i.e.,
+    *  - Attributed event: an event that happened chronologically after an impression and is considered to be
+    * the result of that impression. The advertiser and the user of both the impression and the event
+    * have to be the same for the event to be attributable. Example: a user buying an object after
+    * seeing an ad from an advertiser.*/
+    eventsAndImpressionDF
+      .select('Type, 'timestamp, 'advertiser_id, 'user_id, 'event_type,
+        max('Type).over(Window.partitionBy('user_id, 'advertiser_id)
+          .orderBy("timestamp")).as("impression_occurred"))
+      .filter(('Type === 0).and('impression_occurred === 1))
+
+  }
+
+  def calculateCountOfEvents(sparkSession: SparkSession,
+                             markAttributeEventsDF: Dataset[Row]): DataFrame = {
+    import sparkSession.implicits._
+    markAttributeEventsDF
+      .groupBy('advertiser_id, 'event_type)
+      .agg(count('advertiser_id).as("count_of_events"))
+  }
+
+  def calculateCountOfUniqueEvents(sparkSession: SparkSession,
+                                   markAttributeEventsDF: Dataset[Row]): DataFrame = {
+    import sparkSession.implicits._
+    markAttributeEventsDF
+      .groupBy('advertiser_id, 'user_id, 'event_type)
+      .agg(lit(1).as("unique_user_event_type"))
+      .groupBy('advertiser_id, 'event_type)
+      .agg(count('unique_user_event_type).as("count_of_unique_users"))
+
+  }
+
+  def storeDataToCsv(attributedEventsByAdvertiserDF: DataFrame,
+                     saveMode: SaveMode,
+                     outputFilePath: String): Boolean = {
+    try {
+      attributedEventsByAdvertiserDF
+        .write
+        .mode(saveMode)
+        .option("header", trueValue)
+        .csv(outputFilePath)
+      println(s"Successfully stored data to $outputFilePath")
+      true
+    } catch {
+      case genEx: Exception =>
+        println(s"Exception while storing data to $outputFilePath")
+        genEx.printStackTrace()
+        false
+    }
   }
 
   def main(args: Array[String]): Unit = {
     try {
-      var debugMode = false
 
       var eventsPath = ""
       var impressionsPath = ""
@@ -151,30 +226,21 @@ object AttributionApp {
           .config(getSparkAppConf)
           .getOrCreate()
 
-
         sparkSession.sparkContext.setLogLevel("ERROR")
-        import sparkSession.implicits._
 
         val eventColNames = classOf[Event].getDeclaredFields.map(ea => ea.getName)
 
         println("----------------- Attribute analysis --------------------------")
+
         println("Reading events ....")
         val eventsDS = loadEventsDS(sparkSession, eventsPath, eventColNames)
-
-        if (debugMode) {
-          eventsDS.printSchema()
-          println(s"Events count : ${eventsDS.count()}")
-          eventsDS.show(false)
-        }
+        displayData(eventsDS, "Events count :")
 
         println("Deduplication of events within minute to avoid click on an ad twice by mistake.")
-        val eventsAfterDedupDF = dedupEventsDS(sparkSession, eventsDS)
 
-        if (debugMode) {
-          eventsAfterDedupDF.printSchema()
-          println(s"De-duplicated events count : ${eventsAfterDedupDF.count()}")
-          eventsAfterDedupDF.show(100, falseValue)
-        }
+        val eventsAfterDedupDF = dedupEventsDS(sparkSession, eventsDS)
+        displayData(eventsAfterDedupDF, "De-duplicated events count : ")
+
         println("Deduplication phase complete.")
 
 
@@ -182,52 +248,17 @@ object AttributionApp {
         val impressionColNames = classOf[Impression].getDeclaredFields.map(ea => ea.getName)
 
         val impressionsDS = loadImpressionsDS(sparkSession, impressionsPath, impressionColNames)
-
-        if (debugMode) {
-          impressionsDS.printSchema()
-          println(s"impressions count : ${impressionsDS.count()}")
-          impressionsDS.show(100, trueValue)
-        }
+        displayData(impressionsDS, "impressions count :")
 
         // - The count of attributed events for each advertiser, grouped by event type.
-
-        val eventsAndImpressionDF = eventsAfterDedupDF
-          .select(lit(0).as("Type"), 'timestamp, 'advertiser_id, 'user_id, 'event_type)
-          .union(impressionsDS.select(lit(1).as("Type"), 'timestamp, 'advertiser_id,
-            'user_id, lit("NA").as('event_type)))
-
-        if (debugMode) {
-          eventsAndImpressionDF.printSchema()
-          println(s"Events and impressions combined count : ${eventsAndImpressionDF.count()}")
-          eventsAndImpressionDF.show(100, falseValue)
-        }
-
-        println("Marking/identifying attributed events")
-        /* Mark events which are attributed i.e.,
-        *  - Attributed event: an event that happened chronologically after an impression and is considered to be
-        * the result of that impression. The advertiser and the user of both the impression and the event
-        * have to be the same for the event to be attributable. Example: a user buying an object after
-        * seeing an ad from an advertiser.*/
-        val markAttributeEventsDF =
-          eventsAndImpressionDF
-            .select('Type, 'timestamp, 'advertiser_id, 'user_id, 'event_type,
-              max('Type).over(Window.partitionBy('user_id, 'advertiser_id)
-                .orderBy("timestamp")).as("impression_occurred"))
-            .filter(('Type === 0).and('impression_occurred === 1))
-
-        if (debugMode) {
-          markAttributeEventsDF.printSchema()
-          println(s"Marked attribute events count : ${markAttributeEventsDF.count()}")
-          markAttributeEventsDF.show(100, trueValue)
-        }
+        val markAttributeEventsDF = fetchAttributeEvents(sparkSession, eventsAfterDedupDF, impressionsDS)
+        displayData(markAttributeEventsDF, "Marked attribute events count : ")
 
         println("Caching attributed events")
         markAttributeEventsDF.persist()
 
         println("Generate stats :  The count of attributed events for each advertiser, grouped by event type")
-        val attributedEventsByAdvertiserDF = markAttributeEventsDF
-          .groupBy('advertiser_id, 'event_type)
-          .agg(count('advertiser_id).as("count_of_events"))
+        val attributedEventsByAdvertiserDF = calculateCountOfEvents(sparkSession, markAttributeEventsDF)
 
         if (debugMode) {
           attributedEventsByAdvertiserDF.printSchema()
@@ -236,19 +267,12 @@ object AttributionApp {
         attributedEventsByAdvertiserDF.show()
 
         println("Storing :  The count of attributed events for each advertiser, grouped by event type")
-        attributedEventsByAdvertiserDF
-          .write
-          .mode(SaveMode.Overwrite)
-          .option("header", trueValue)
-          .csv(countOfEventsOutputPath)
+        storeDataToCsv(attributedEventsByAdvertiserDF, SaveMode.Overwrite, countOfEventsOutputPath)
 
         // - The count of unique users that have generated attributed events for each advertiser, grouped by event type.
-        println("Generate stats :  The count of unique users that have generated attributed events for each advertiser, grouped by event type.")
-        val attributedUniqueUsersByAdvertiserDF = markAttributeEventsDF
-          .groupBy('advertiser_id, 'user_id, 'event_type)
-          .agg(lit(1).as("unique_user_event_type"))
-          .groupBy('advertiser_id, 'event_type)
-          .agg(count('unique_user_event_type).as("count_of_unique_users"))
+        println("Generate stats :  The count of unique users that have generated attributed events for each advertiser, " +
+          "grouped by event type.")
+        val attributedUniqueUsersByAdvertiserDF = calculateCountOfUniqueEvents(sparkSession, markAttributeEventsDF)
 
         if (debugMode) {
           attributedUniqueUsersByAdvertiserDF.printSchema()
@@ -257,12 +281,9 @@ object AttributionApp {
         }
         attributedUniqueUsersByAdvertiserDF.show()
 
-        println("Storing :   The count of unique users that have generated attributed events for each advertiser, grouped by event type.")
-        attributedUniqueUsersByAdvertiserDF
-          .write
-          .mode(SaveMode.Overwrite)
-          .option("header", trueValue)
-          .csv(countOfUniqueUsersOutputPath)
+        println("Storing :   The count of unique users that have generated attributed events for each advertiser, " +
+          "grouped by event type.")
+        storeDataToCsv(attributedUniqueUsersByAdvertiserDF, SaveMode.Overwrite, countOfUniqueUsersOutputPath)
 
         println("----------------- Attribute analysis completed!!! --------------------------")
         sparkSession.stop()
@@ -287,5 +308,3 @@ object AttributionApp {
   }
 }
 
-//https://stackoverflow.com/questions/43729262/how-to-write-unit-tests-in-spark-2-0
-//https://www.youtube.com/watch?v=CilGf0yqpDA
