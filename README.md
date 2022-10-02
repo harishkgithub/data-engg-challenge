@@ -78,6 +78,11 @@ Hadoop 2.8.3
 Intellij 2022.2.2
 WIndows command prompt
 
+# Mac
+ sh RunAttribution.sh /Users/harishkumar/EsKaZo/hk/data-engg-challenge-dev_3.3.0_hadoop3/src/resources/data/events.csv \
+ /Users/harishkumar/EsKaZo/hk/data-engg-challenge-dev_3.3.0_hadoop3/src/resources/data/impressions.csv \
+ /Users/harishkumar/EsKaZo/hk/data-engg-challenge-dev_3.3.0_hadoop3/src/resources/data/count_of_events.csv \
+ /Users/harishkumar/EsKaZo/hk/data-engg-challenge-dev_3.3.0_hadoop3/src/resources/data/count_of_uniqueusers.csv
 
 # Additional context:
 Test run :2
