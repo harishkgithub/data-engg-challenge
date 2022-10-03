@@ -5,8 +5,10 @@ Coding challenge with Apache spark, scala
 ## Prerequisite installation :
 i) Java 8 or above should be installed
 Set JAVA_HOME and PATH 
+```
 export JAVA_HOME=<Path to jdk folder>
 export PATH=$PATH:$JAVA_HOME
+```
 
 ii) Spark 3.3.0 is installed
 Download spark from https://spark.apache.org/downloads.html
@@ -14,11 +16,15 @@ I used Spark 3.3.0 with "Pre-built for Apache Hadoop 3.3 and later" [spark-3.3.0
 "=/Users/harishkumar/spark-3.3.0-bin-hadoop3/" is unzipped spark location which contains bin folder having spark-submit script
 
 Set SPARK_HOME and PATH
+```
 export SPARK_HOME=/Users/harishkumar/spark-3.3.0-bin-hadoop3/
 export PATH=$PATH:$SPARK_HOME/bin
+```
 
 iii) sbt (scala build tool) is installed
-brew install sbt
+```
+brew install 
+```
 
 
 ## Deploy and run script:
