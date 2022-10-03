@@ -71,10 +71,15 @@ iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_
 
 # Tested on
 sbt 1.7.1
+
 Java 1.8.0_341
+
 Spark 3.3.0
+
 Hadoop 2.8.3
+
 Intellij 2022.2.2
+
 MacOS Monterey
 
 ==================================================================================
