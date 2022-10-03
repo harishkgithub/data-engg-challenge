@@ -2,7 +2,7 @@
 #set -x
 usage()
 {
-  echo "Usage: $0 <events_path> <impressions_path> <count_of_events_path> <count_of_users_path>"
+  echo "Usage: $0 <events_path> <impressions_path> <count_of_events_dir_path> <count_of_unique_users_dir_path>"
   exit 1
 }
 if [ $# -lt 4 ] ; then
@@ -44,7 +44,8 @@ echo
 if [ -e $tmp_count_of_events ]
 then
     echo "Copying output files of count_of_events to $count_of_events"
-    cat $tmp_count_of_events/part*.csv > $count_of_events
+    mkdir $count_of_events
+    cat $tmp_count_of_events/part*.csv > $count_of_events/count_of_events.csv
     echo "deleting temporary files of count_of_events"
     rm -r $tmp_count_of_events
 else
@@ -55,7 +56,8 @@ fi
 if [ -e $tmp_count_of_users ]
 then
    echo "Copying output files of count_of_unique_users to $count_of_users"
-   cat $tmp_count_of_users/part*.csv > $count_of_users
+   mkdir $count_of_users
+   cat $tmp_count_of_users/part*.csv > $count_of_users/count_of_users.csv
    echo "deleting temporary files of count_of_users"
    rm -r $tmp_count_of_users
    echo "Analysis completed!!!"
