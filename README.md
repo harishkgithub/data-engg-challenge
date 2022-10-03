@@ -66,8 +66,10 @@ i)/Users/harishkumar/data-engg-challenge-main/src/resources/data/events.csv  is 
 ii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/impressions.csv is impressions.csv file path
 
 iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/outputev  is output directory where count_of_events.csv will be store
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/outputev should be new directory name as the application will create it in runner script
 
 iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/outputusr is output directory where count_of_users.csv will be stored
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/outputusr should be new directory name as the application will create it in runner script
 
 # Tested with 
 sbt 1.7.1
