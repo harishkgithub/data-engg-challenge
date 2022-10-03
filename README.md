@@ -48,13 +48,13 @@ sh deployAttribution.sh
 then run the below command to execute the application
 ```
 sh RunAttribution.sh /Users/harishkumar/data-engg-challenge-main/src/resources/data/events.csv  /Users/harishkumar/data-engg-challenge-main/src/resources/data/impressions.csv  \
-/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_events.csv  /Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_uniqueusers.csv
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_events.csv  /Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_uniqueusers.csv
 ```
 
 Once the script completes we will have our output files of count_of_events.csv and count_of_uniqueusers.csv store at
 ```
-/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_events.csv  and 
-/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_uniqueusers.csv
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_events.csv  and 
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_uniqueusers.csv
 ```
 
 Note: You can give your own events.csv and impressions.csv path and output location
@@ -64,9 +64,9 @@ i)/Users/harishkumar/data-engg-challenge-main/src/resources/data/events.csv  is 
 
 ii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/impressions.csv is impressions.csv file path
 
-iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_events.csv  is count_of_events.csv output file path
+iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_events.csv  is count_of_events.csv output file path
 
-iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_uniqueusers.csv is count_of_users.csv output file path
+iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_uniqueusers.csv is count_of_users.csv output file path
 
 # Tested on
 sbt 1.7.1
