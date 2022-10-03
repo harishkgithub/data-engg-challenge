@@ -1,6 +1,7 @@
 package com.hk.mm.assignment
 
 import com.hk.mm.assignment.AttributionApp.{Event, Impression, calculateCountOfEvents, calculateCountOfUniqueEvents, dedupEventsDS, fetchAttributeEvents, loadEventsDS, loadImpressionsDS}
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
@@ -73,5 +74,30 @@ class AttributionAppTest extends FunSuite with BeforeAndAfterAll {
     assert(attributeEventByAdvertiserMap(1) == 1, ":- Count unique users  for advertiser_id 1 is 1")
 
   }
+
+  test("Test dedup events") {
+    //Count of raw events
+    assert(events_1DS
+      .filter(col("user_id") === "60000000-fd7e-48e4-aa61-3c14c9c714d5")
+      .filter(col("event_type") === "click")
+      .filter(col("timestamp") > 1450631449)
+      .filter(col("timestamp") < 1450631509)
+      .count() == 4
+      , "Count events for 60000000-fd7e-48e4-aa61-3c14c9c714d5 with type click is 4")
+
+    val eventsAfterDedupDF = dedupEventsDS(spark, events_1DS)
+    //Checking if events are correctly discarded if there are mulitple events in 60 seconds
+    assert(eventsAfterDedupDF
+      .filter(col("user_id") === "60000000-fd7e-48e4-aa61-3c14c9c714d5")
+      .filter(col("event_type") === "click")
+      .filter(col("timestamp") > 1450631449)
+      .filter(col("timestamp") < 1450631509)
+      .count() == 1 ,"Count events for 60000000-fd7e-48e4-aa61-3c14c9c714d5 with type click is 1")
+
+    val markAttributeEventsDF = fetchAttributeEvents(spark, eventsAfterDedupDF, impressions_1DS)
+    markAttributeEventsDF.show(100)
+
+  }
+
 
 }
