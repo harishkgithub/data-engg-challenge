@@ -55,7 +55,6 @@ class AttributionAppTest extends FunSuite with BeforeAndAfterAll {
     val attributedUniqueUsersByAdvertiserDF = calculateCountOfUniqueEvents(spark, markAttributeEventsDF)
     assert(attributedUniqueUsersByAdvertiserDF.count() == 2, "attribute unique users count should be 2")
 
-    attributedEventsByAdvertiserDF.show()
     attributedEventsByAdvertiserDF.printSchema()
     val attributeEventByAdvertiserMap = new mutable.HashMap[Int, Long]
     attributedEventsByAdvertiserDF.collect().foreach(r =>
@@ -64,7 +63,6 @@ class AttributionAppTest extends FunSuite with BeforeAndAfterAll {
     assert(attributeEventByAdvertiserMap(2) == 1, ":- Count events for advertiser_id 2 is 1")
     assert(attributeEventByAdvertiserMap(1) == 1, ":- Count events for advertiser_id 1 is 1")
 
-    attributedUniqueUsersByAdvertiserDF.show()
     attributedUniqueUsersByAdvertiserDF.printSchema()
     val attributedUniqueUsersByAdvertiserMap = new mutable.HashMap[Int, Long]
     attributedEventsByAdvertiserDF.collect().foreach(ea =>
@@ -80,24 +78,60 @@ class AttributionAppTest extends FunSuite with BeforeAndAfterAll {
     assert(events_1DS
       .filter(col("user_id") === "60000000-fd7e-48e4-aa61-3c14c9c714d5")
       .filter(col("event_type") === "click")
+      .filter(col("advertiser_id") === 1)
       .filter(col("timestamp") > 1450631449)
       .filter(col("timestamp") < 1450631509)
       .count() == 4
       , "Count events for 60000000-fd7e-48e4-aa61-3c14c9c714d5 with type click is 4")
 
     val eventsAfterDedupDF = dedupEventsDS(spark, events_1DS)
-    //Checking if events are correctly discarded if there are mulitple events in 60 seconds
+    //Checking if 3 events are correctly discarded as they are from
+    // same user for same advertiser with time difference of 60 seconds
     assert(eventsAfterDedupDF
       .filter(col("user_id") === "60000000-fd7e-48e4-aa61-3c14c9c714d5")
       .filter(col("event_type") === "click")
+      .filter(col("advertiser_id") === 1)
       .filter(col("timestamp") > 1450631449)
       .filter(col("timestamp") < 1450631509)
-      .count() == 1 ,"Count events for 60000000-fd7e-48e4-aa61-3c14c9c714d5 with type click is 1")
+      .count() == 1, "Count events for 60000000-fd7e-48e4-aa61-3c14c9c714d5 with type click and advertiser_id 1 is 1")
 
+    assert(eventsAfterDedupDF
+      .filter(col("user_id") === "60000000-fd7e-48e4-aa61-3c14c9c714d5")
+      .filter(col("event_type") === "purchase")
+      .filter(col("advertiser_id") === 1)
+      .filter(col("timestamp") > 1450631449)
+      .filter(col("timestamp") < 1450631509)
+      .count() == 1, "Even though there is an  events for 60000000-fd7e-48e4-aa61-3c14c9c714d5 with type purchase and advertiser_id 1 withing " +
+      "1 minute time range its not filtered as the event type is different purchase and same as previous click")
+
+    /* Attribution test case*/
+    assert(eventsAfterDedupDF
+      .filter(col("advertiser_id") === 11)
+      .filter(col("user_id") === "harish")
+      .filter(col("event_type") === "click")
+      .filter(col("timestamp") < 1450631930).count() == 1, "There is 1 event of " +
+      "user harish with event type click from advertiser_id 11")
     val markAttributeEventsDF = fetchAttributeEvents(spark, eventsAfterDedupDF, impressions_1DS)
-    markAttributeEventsDF.show(100)
+
+    //Events before impression should not be marked as attributed event
+    assert(markAttributeEventsDF
+      .filter(col("advertiser_id") === 11)
+      .filter(col("user_id") === "harish")
+      .filter(col("event_type") === "click")
+      .filter(col("timestamp") < 1450631930).count() == 0,
+      "there is an impression at 1450631930 so there should not be any event before 1450631930 of " +
+        "user harish with event type click from advertiser_id 11")
+
+    //Events after impression should be marked as attributed event
+    assert(markAttributeEventsDF
+      .filter(col("advertiser_id") === 11)
+      .filter(col("user_id") === "harish")
+      .filter(col("event_type") === "click")
+      .filter(col("timestamp") > 1450631930)
+      .filter(col("timestamp") < 1450632049).count() == 1,
+      "there is an impression at 1450631930 so any event after 1450631930 with " +
+        "user harish with event type click from advertiser_id 11 should be marked as attributed event")
 
   }
-
 
 }
