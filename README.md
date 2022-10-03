@@ -23,48 +23,58 @@ brew install sbt
 
 ## Deploy and run script:
 
-Step 1: Clone the project
-git clone https://github.com/harishkgithub/data-engg-challenge.git
-or
-Download the project from https://github.com/harishkgithub/data-engg-challenge
-or
-Download the source code from email attachment "data-engg-challenge-main.zip" and unzip it 
+Step 1: Download the source code from email attachment "data-engg-challenge-main.zip" and unzip it.
+Open terminal and give write permissions for unzipped folder "/Users/harishkumar/data-engg-challenge-main" 
+navigate inside the unzipped folder "data-engg-challenge-main" to the Scripts directory 
+Ex:
+```
+chmod -R 755 /Users/harishkumar/data-engg-challenge-main/
 
-Step 2: Building the project
-i) Navigate inside the project folder "data-engg-challenge"
-cd data-engg-challenge
+cd /Users/harishkumar/data-engg-challenge-main/src/main/Scripts/Linux_Mac
+```
 
-ii) Switch to branch dev_3.3.0_hadoop3
-git checkout dev_3.3.0_hadoop3
-
-Step 3: Running the script
-Navigate to script folder "data-engg-challenge-dev_3.3.0_hadoop3/src/main/Scripts/Linux_Mac"
-cd src/main/Scripts/Linux_Mac
-
-Step 4: Build the project and run it.
-Run the below script to build the jar
+Step 2: Building and running the project.
+i)Run the below script to build the jar [Here we check for java,sbt,spark installations and build the project to runnable jar]
+```
 sh deployAttribution.sh
+```
 
 then run the below command to execute the application
-sh RunAttribution.sh /Users/harishkumar/data/events.csv  /Users/harishkumar/data/impressions.csv  \
-/Users/harishkumar/data/count_of_events.csv  /Users/harishkumar/data/count_of_uniqueusers.csv
+```
+sh RunAttribution.sh /Users/harishkumar/data-engg-challenge-main/src/resources/data/events.csv  /Users/harishkumar/data-engg-challenge-main/src/resources/data/impressions.csv  \
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_events.csv  /Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_uniqueusers.csv
+```
 
-Here
-i)events.csv path is file:///E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\events.csv
-ii)impressions.csv file path is file:///E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\impressions.csv
-iii)count_of_events.csv output file path is E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_events.csv
-iii)count_of_users.csv output file path is E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_users.csv
+Once the script completes we will have our output files of count_of_events.csv and count_of_uniqueusers.csv store at
+```
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_events.csv  and 
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_uniqueusers.csv
+```
 
-Once the spark submit command completes successfully again Navigate to script folder "data-engg-challenge\src\main\Scripts"
-Run the script to rename the intermediate output files to required format
-PostProcessing.bat E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_events.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_users.csv
+Note: You can give your own events.csv and impressions.csv path and output location
+Here in my example 
 
-Press 'Y' if prompted for all input
-On success we will see output files at
-E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_events.csv
-E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_users.csv
+i)/Users/harishkumar/data-engg-challenge-main/src/resources/data/events.csv  is events.csv path
 
-# Windows users :- 
+ii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/impressions.csv is impressions.csv file path
+
+iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_events.csv  is count_of_events.csv output file path
+
+iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_uniqueusers.csv is count_of_users.csv output file path
+
+# Tested on
+sbt 1.7.1
+Java 1.8.0_341
+Spark 3.3.0
+Hadoop 2.8.3
+Intellij 2022.2.2
+MacOS Monterey
+
+===================================================================================================================================================================================================
+
+# Windows users (In-Complete)  :- 
+ We can use this guide to run the project on windows but this not tested and its incomplete
+
 Prerequisite:
 
 i) Java 8 or above is installed
@@ -95,24 +105,19 @@ Run
 "E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources" is the folder where we write our output files
 
 
-Step 1: Clone the project
-git clone https://github.com/harishkgithub/data-engg-challenge.git
-or 
-Download the project from https://github.com/harishkgithub/data-engg-challenge
+Step 1: Step 1: Download the source code from email attachment "data-engg-challenge-main.zip" and unzip it.
+Open terminal and give write permissions for unzipped folder
 
 Step 2: Building the project 
 i) Navigate inside the project folder "data-engg-challenge"
 cd data-engg-challenge
 
-ii) Switch to branch dev_3.3.0_hadoop3
-git checkout dev_3.3.0_hadoop3
-
-iii) Run "sbt package"
+ii) Run "sbt package"
 this will generate the jar "target\scala-2.12\data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar"
 
 Step 3: Running the script
-Navigate to script folder "data-engg-challenge\src\main\Scripts"
-cd src\main\Scripts
+Navigate to script folder "data-engg-challenge\src\main\Scripts\windows"
+cd src\main\Scripts\windows
 
 Run the script to run the spark submit command on input files
 RunAttribute.bat file:///E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\events.csv file:///E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\impressions.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_events.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_users.csv
@@ -132,18 +137,4 @@ On success we will see output files at
 E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_events.csv 
 E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_users.csv
 
-# Tested on
-sbt 1.7.1 
-Java 1.8.0_341
-Windows 10
-Spark 3.3.0
-Hadoop 2.8.3
-Intellij 2022.2.2
-WIndows command prompt
-
-
-# Additional context:
-Test run :2
-RunAttribute.bat E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\events.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\impressions.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\count_of_events.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\count_of_users.csv
-
-PostProcessing.bat E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\count_of_events.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\data\count_of_users.csv
+===================================================================================================================================================================================================
