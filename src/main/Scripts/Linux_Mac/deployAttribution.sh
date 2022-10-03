@@ -51,6 +51,6 @@ echo "Please run the application wit RunAttribution.sh :
  sh RunAttribution.sh /Users/harishkumar/data-engg-challenge-main/src/resources/data/events.csv  \
  /Users/harishkumar/data-engg-challenge-main/src/resources/data/impressions.csv  \
 /Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_events.csv  \
-/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_uniqueusers.csv
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/count_of_uniqueusers.csv"
 
 echo
