@@ -41,39 +41,7 @@ class AttributionAppTest extends FunSuite with BeforeAndAfterAll {
     assert(impressionsDS.count() == 15, " record count should be 15")
   }
 
-  test("Count of attribute Events and unique users") {
-
-    val eventsAfterDedupDF = dedupEventsDS(spark, eventsDS)
-    // - The count of attributed events for each advertiser, grouped by event type.
-    val markAttributeEventsDF = fetchAttributeEvents(spark, eventsAfterDedupDF, impressionsDS)
-
-    markAttributeEventsDF.persist()
-
-    val attributedEventsByAdvertiserDF = calculateCountOfEvents(spark, markAttributeEventsDF)
-    assert(attributedEventsByAdvertiserDF.count() == 2, "attribute events count should be 2")
-
-    val attributedUniqueUsersByAdvertiserDF = calculateCountOfUniqueEvents(spark, markAttributeEventsDF)
-    assert(attributedUniqueUsersByAdvertiserDF.count() == 2, "attribute unique users count should be 2")
-
-    attributedEventsByAdvertiserDF.printSchema()
-    val attributeEventByAdvertiserMap = new mutable.HashMap[Int, Long]
-    attributedEventsByAdvertiserDF.collect().foreach(r =>
-      attributeEventByAdvertiserMap.put(r.getInt(0), r.getLong(2)))
-
-    assert(attributeEventByAdvertiserMap(2) == 1, ":- Count events for advertiser_id 2 is 1")
-    assert(attributeEventByAdvertiserMap(1) == 1, ":- Count events for advertiser_id 1 is 1")
-
-    attributedUniqueUsersByAdvertiserDF.printSchema()
-    val attributedUniqueUsersByAdvertiserMap = new mutable.HashMap[Int, Long]
-    attributedEventsByAdvertiserDF.collect().foreach(ea =>
-      attributedUniqueUsersByAdvertiserMap.put(ea.getInt(0), ea.getLong(2)))
-
-    assert(attributeEventByAdvertiserMap(2) == 1, ":- Count unique users for advertiser_id 2 is 1")
-    assert(attributeEventByAdvertiserMap(1) == 1, ":- Count unique users  for advertiser_id 1 is 1")
-
-  }
-
-  test("Test dedup events") {
+  test("Test dedup and mark attributed events") {
     //Count of raw events
     assert(events_1DS
       .filter(col("user_id") === "60000000-fd7e-48e4-aa61-3c14c9c714d5")
@@ -131,6 +99,38 @@ class AttributionAppTest extends FunSuite with BeforeAndAfterAll {
       .filter(col("timestamp") < 1450632049).count() == 1,
       "there is an impression at 1450631930 so any event after 1450631930 with " +
         "user harish with event type click from advertiser_id 11 should be marked as attributed event")
+
+  }
+
+  test("Count of attribute Events and unique users") {
+
+    val eventsAfterDedupDF = dedupEventsDS(spark, eventsDS)
+    // - The count of attributed events for each advertiser, grouped by event type.
+    val markAttributeEventsDF = fetchAttributeEvents(spark, eventsAfterDedupDF, impressionsDS)
+
+    markAttributeEventsDF.persist()
+
+    val attributedEventsByAdvertiserDF = calculateCountOfEvents(spark, markAttributeEventsDF)
+    assert(attributedEventsByAdvertiserDF.count() == 2, "attribute events count should be 2")
+
+    val attributedUniqueUsersByAdvertiserDF = calculateCountOfUniqueEvents(spark, markAttributeEventsDF)
+    assert(attributedUniqueUsersByAdvertiserDF.count() == 2, "attribute unique users count should be 2")
+
+    attributedEventsByAdvertiserDF.printSchema()
+    val attributeEventByAdvertiserMap = new mutable.HashMap[Int, Long]
+    attributedEventsByAdvertiserDF.collect().foreach(r =>
+      attributeEventByAdvertiserMap.put(r.getInt(0), r.getLong(2)))
+
+    assert(attributeEventByAdvertiserMap(2) == 1, ":- Count events for advertiser_id 2 is 1")
+    assert(attributeEventByAdvertiserMap(1) == 1, ":- Count events for advertiser_id 1 is 1")
+
+    attributedUniqueUsersByAdvertiserDF.printSchema()
+    val attributedUniqueUsersByAdvertiserMap = new mutable.HashMap[Int, Long]
+    attributedEventsByAdvertiserDF.collect().foreach(ea =>
+      attributedUniqueUsersByAdvertiserMap.put(ea.getInt(0), ea.getLong(2)))
+
+    assert(attributeEventByAdvertiserMap(2) == 1, ":- Count unique users for advertiser_id 2 is 1")
+    assert(attributeEventByAdvertiserMap(1) == 1, ":- Count unique users  for advertiser_id 1 is 1")
 
   }
 
