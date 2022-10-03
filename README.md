@@ -1,6 +1,69 @@
 # data-engg-challenge
 Coding challenge with Apache spark, scala
 
+# Linux/Mac users :-
+## Prerequisite installation :
+i) Java 8 or above should be installed
+Set JAVA_HOME and PATH 
+export JAVA_HOME=<Path to jdk folder>
+export PATH=$PATH:$JAVA_HOME
+
+ii) Spark 3.3.0 is installed
+Download spark from https://spark.apache.org/downloads.html
+I used Spark 3.3.0 with "Pre-built for Apache Hadoop 3.3 and later" [spark-3.3.0-bin-hadoop3.tgz unzip it]
+"=/Users/harishkumar/spark-3.3.0-bin-hadoop3/" is unzipped spark location which contains bin folder having spark-submit script
+
+Set SPARK_HOME and PATH
+export SPARK_HOME=/Users/harishkumar/spark-3.3.0-bin-hadoop3/
+export PATH=$PATH:$SPARK_HOME/bin
+
+iii) sbt (scala build tool) is installed
+brew install sbt
+
+
+## Deploy and run script:
+
+Step 1: Clone the project
+git clone https://github.com/harishkgithub/data-engg-challenge.git
+or
+Download the project from https://github.com/harishkgithub/data-engg-challenge
+or
+Download the source code from email attachment "data-engg-challenge-main.zip" and unzip it 
+
+Step 2: Building the project
+i) Navigate inside the project folder "data-engg-challenge"
+cd data-engg-challenge
+
+ii) Switch to branch dev_3.3.0_hadoop3
+git checkout dev_3.3.0_hadoop3
+
+Step 3: Running the script
+Navigate to script folder "data-engg-challenge-dev_3.3.0_hadoop3/src/main/Scripts/Linux_Mac"
+cd src/main/Scripts/Linux_Mac
+
+Step 4: Build the project and run it.
+Run the below script to build the jar
+sh deployAttribution.sh
+
+then run the below command to execute the application
+sh RunAttribution.sh /Users/harishkumar/data/events.csv  /Users/harishkumar/data/impressions.csv  \
+/Users/harishkumar/data/count_of_events.csv  /Users/harishkumar/data/count_of_uniqueusers.csv
+
+Here
+i)events.csv path is file:///E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\events.csv
+ii)impressions.csv file path is file:///E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\impressions.csv
+iii)count_of_events.csv output file path is E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_events.csv
+iii)count_of_users.csv output file path is E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_users.csv
+
+Once the spark submit command completes successfully again Navigate to script folder "data-engg-challenge\src\main\Scripts"
+Run the script to rename the intermediate output files to required format
+PostProcessing.bat E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_events.csv E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_users.csv
+
+Press 'Y' if prompted for all input
+On success we will see output files at
+E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_events.csv
+E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_users.csv
+
 # Windows users :- 
 Prerequisite:
 
@@ -78,11 +141,6 @@ Hadoop 2.8.3
 Intellij 2022.2.2
 WIndows command prompt
 
-# Mac
- sh RunAttribution.sh /Users/harishkumar/EsKaZo/hk/data-engg-challenge-dev_3.3.0_hadoop3/src/resources/data/events.csv \
- /Users/harishkumar/EsKaZo/hk/data-engg-challenge-dev_3.3.0_hadoop3/src/resources/data/impressions.csv \
- /Users/harishkumar/EsKaZo/hk/data-engg-challenge-dev_3.3.0_hadoop3/src/resources/data/count_of_events.csv \
- /Users/harishkumar/EsKaZo/hk/data-engg-challenge-dev_3.3.0_hadoop3/src/resources/data/count_of_uniqueusers.csv
 
 # Additional context:
 Test run :2
