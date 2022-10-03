@@ -19,22 +19,24 @@ fi
 echo "Simple attribution application that produces a report!!"
 
 echo spark-submit --class com.hk.mm.assignment.AttributionApp --master local[1] \
-../../../../target/scala-2.12/data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar $events_path $impressions_path $tmp_count_of_events $tmp_count_of_users
+../../../../target/scala-2.12/data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar \
+$events_path $impressions_path $tmp_count_of_events $tmp_count_of_users
 
 echo
 
 spark-submit --class com.hk.mm.assignment.AttributionApp --master local[1] \
-../../../../target/scala-2.12/data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar $events_path $impressions_path $tmp_count_of_events $tmp_count_of_users
+../../../../target/scala-2.12/data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar \
+$events_path $impressions_path $tmp_count_of_events $tmp_count_of_users
 
 echo
 
-echo "Copying output files of count_of_events"
-cat $tmp_count_of_events/part*.csv $count_of_events
+echo "Copying output files of count_of_events to $count_of_events"
+cat $tmp_count_of_events/part*.csv > $count_of_events
 echo "deleting temporary files of count_of_events"
 rm -r $tmp_count_of_events
 
-echo "Copying output files of count_of_users"
-cat $tmp_count_of_users/part*.csv count_of_users
+echo "Copying output files of count_of_unique_users to $count_of_users"
+cat $tmp_count_of_users/part*.csv > $count_of_users
 echo "deleting temporary files of count_of_users"
 rm -r $tmp_count_of_users
 
