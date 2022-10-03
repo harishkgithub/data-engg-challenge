@@ -54,7 +54,7 @@ sh RunAttribution.sh /Users/harishkumar/data-engg-challenge-main/src/resources/d
 
 Once the script completes we will have our output files of count_of_events.csv and count_of_uniqueusers.csv store at
 ```
-/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_events.csv  and 
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_events.csv 
 /Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_uniqueusers.csv
 ```
 
