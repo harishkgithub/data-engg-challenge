@@ -1,11 +1,28 @@
 package com.hk.mm.assignment
 
+import org.apache.log4j.Logger
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.functions.{count, first, lag, lit, sum, when, window}
-import org.apache.spark.sql.types.{IntegerType, LongType, TimestampType}
-import org.apache.spark.sql.{Encoders, SparkSession, functions}
+import org.apache.spark.sql.functions.{count, lit, max}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SaveMode, SparkSession}
 
-object AttributionApp {
+import java.util.Properties
+import scala.util.Try
+import scala.io.Source
+
+/**
+ * The statistics that the application should compute are:
+ * The count of attributed events for each advertiser, grouped by event type.
+ * The count of unique users that have generated attributed events for each advertiser , grouped by event type.
+ */
+object AttributionApp extends Serializable {
+
+  @transient lazy val logger: Logger = Logger.getLogger(getClass.getName)
+  val trueValue = true
+  val falseValue = false
+  var debugMode = false
+
+  var sparkConfFilePath = ""
 
   //    ### Events
   //      This dataset contains a series of interactions of users with brands: events.csv
@@ -31,144 +48,272 @@ object AttributionApp {
   //      4 | user_id | string(UUIDv4) | An anonymous user ID this ad was displayed to.
   case class Impression(timestamp: Int, advertiser_id: Int, creative_id: Int, user_id: String)
 
-  def main(args: Array[String]): Unit = {
+  class MMInvalidParameterException(s: String) extends Exception(s) {}
 
-    // initialise spark session (running in "local" mode)
-    val sparkSession = SparkSession.builder
-      .master("local")
-      .appName("AttributeApp")
-      .getOrCreate()
+  //  def genericExec[T](query: String)(implicit rconv: GetResult[T]) : List[T] = ...
 
-    sparkSession.sparkContext.setLogLevel("ERROR")
-    import sparkSession.implicits._
-
-    val eventColNames = classOf[Event].getDeclaredFields.map(ea => ea.getName)
-
-    println("Attribute analysis")
-    val eventsDFCsv = sparkSession
-      .read
-      .option("header", false)
-      .option("inferSchema", true)
-      .csv("src/resources/events.csv")
-      .toDF(eventColNames: _*)
-      .as[Event]
-
-    eventsDFCsv.printSchema()
-    eventsDFCsv.show(100, true);
-
-    // Create an instance of UDAF GeometricMean.
-    val gm = new PreviousMin
-
-    // Show the geometric mean of values of column "id".
-//    val opDF = eventsDFCsv
-//      .withColumn("timestamp_casted", 'timestamp.cast(IntegerType))
-//      .groupBy('user_id)
-//      .agg(gm('timestamp_casted).as("PreviousMin"))
-//    println("Schema")
-//    opDF.printSchema()
-//    opDF.show(100,false);
-
-    val eventsWithPrevMinDF1 = eventsDFCsv.groupBy('user_id, 'advertiser_id, 'event_type)
-      .agg(gm('timestamp).as("PreviousMin"))
-
-    val eventsWithPrevMinDF = eventsDFCsv
-      .select('user_id, 'advertiser_id, 'event_type,
-        gm('timestamp).over(Window.partitionBy('user_id, 'advertiser_id, 'event_type)
-      .orderBy("timestamp")).as("PreviousMin"),'timestamp)
-
-    println("Schema")
-    eventsWithPrevMinDF.printSchema()
-    eventsWithPrevMinDF.show(100, false);
-
-
-    println("-----------Completed-------------")
-
-    sparkSession.stop()
-
-    val w = Window.partitionBy('user_id, 'advertiser_id, 'event_type)
-      .orderBy("timestamp")
-
-    val prevMinimumTimeStamp = MMDedup.toColumn.name("Pre_min")
-    eventsDFCsv
-      .withColumn("Pre_min", prevMinimumTimeStamp.over(w))
-      //                .withColumn("count", functions.max("counter")
-      //                  .over(Window.partitionBy('user_id, 'advertiser_id, 'event_type)))
-      //                 .withColumn("FLG_LAST_WDW",
-      //                   when('counter === 'count,1)
-      //                   .otherwise(lit(0)))
-      .show(false)
-
-
-
-    val impressionColNames = classOf[Impression].getDeclaredFields.map(ea => ea.getName)
-
-    val impressionsDFCsv = sparkSession
-      .read
-      .option("header", false)
-      .option("inferSchema", true)
-      .csv("src/resources/impressions.csv")
-      .toDF(impressionColNames: _*)
-      .as[Impression]
-
-    impressionsDFCsv.printSchema()
-    impressionsDFCsv.show(100, true);
-
-    println("impressionsDFCsv count " + impressionsDFCsv.count());
-
-    val w1 = Window.partitionBy('user_id, 'advertiser_id, 'event_type)
-      .orderBy("timestamp")
-      .rangeBetween(0, 60)
-
-    eventsDFCsv
-      .withColumn("counter", sum(lit(1)).over(w))
-      .withColumn("count", functions.max("counter")
-        .over(Window.partitionBy('user_id, 'advertiser_id, 'event_type)))
-      .withColumn("FLG_LAST_WDW",
-        when('counter === 'count, 1)
-          .otherwise(lit(0))).show(false)
-
-    val eventsCastedDF = eventsDFCsv
-      .withColumn("timestamp_casted", 'timestamp.cast(LongType).cast(TimestampType))
-
-    eventsCastedDF.printSchema()
-    eventsCastedDF.show(100, false)
-
-    val aggDF = eventsDFCsv
-      .groupBy('user_id, window('timestamp_casted, "1 minutes"))
-      .sum("advertiser_id")
-    aggDF.printSchema();
-    aggDF.show(100, false)
-
-
-    //De-duplictaion using sessionization
-    val maxSessionDuration = 60L
-    val eventWithSessionIds = eventsDFCsv
-      .select('user_id, 'advertiser_id, 'event_type, 'timestamp,
-        lag('timestamp, 1)
-          .over(Window.partitionBy('user_id, 'advertiser_id, 'event_type).orderBy('timestamp))
-          .as('prevTimestamp))
-      .select('user_id, 'advertiser_id, 'event_type, 'timestamp,
-        when('timestamp.minus('prevTimestamp) < lit(maxSessionDuration), lit(0)).otherwise(lit(1))
-          .as('isNewSession))
-      .select('user_id, 'advertiser_id, 'event_type, 'timestamp,
-        sum('isNewSession)
-          .over(Window.partitionBy('user_id, 'advertiser_id, 'event_type).orderBy('user_id, 'advertiser_id, 'event_type, 'timestamp))
-          .as('sessionId))
-
-    eventWithSessionIds.printSchema();
-    eventWithSessionIds.show(100, false);
-
-    //    val ds = eventWithSessionIds
-    //      .groupBy("user_id", "sessionId")
-    //      .agg(functions.min("timestamp").as("startTime"),
-    //        functions.max("timestamp").as("endTime"),
-    //        count("*").as("count"))
-    //    ds.printSchema()
-    //    ds.show(100);
-
-    // terminate underlying spark context
-    sparkSession.stop()
+  def displayData[T](df: Dataset[T],
+                     desc: String,
+                     size: Int = 100,
+                     truncate: Boolean = false): Unit = {
+    if (debugMode) {
+      df.printSchema()
+      logger.info(s"$desc: ${df.count()}")
+      df.show(size, truncate)
+    }
   }
 
+  def usage(errorMsg: String = ""): Unit = {
+    logger.info(errorMsg)
+    logger.info("Usage : spark-submit --master local[1] data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar <Path to event.csv> <Path to impression.csv> <Path to output count events> Optional<spark conf file>")
+  }
 
+  def loadEventsDS(sparkSession: SparkSession,
+                   eventsPath: String,
+                   eventColNames: Array[String]): Dataset[Event] = {
+    import sparkSession.implicits._
+    sparkSession.read.option("header", falseValue)
+      .option("inferSchema", trueValue)
+      .csv(eventsPath)
+      .toDF(eventColNames: _*)
+      .as[Event]
+  }
+
+  def loadImpressionsDS(sparkSession: SparkSession,
+                        impressionsPath: String,
+                        impressionColNames: Array[String]): Dataset[Impression] = {
+    import sparkSession.implicits._
+    sparkSession
+      .read
+      .option("header", falseValue)
+      .option("inferSchema", trueValue)
+      .csv(impressionsPath)
+      .toDF(impressionColNames: _*)
+      .as[Impression]
+  }
+
+  def dedupEventsDS(sparkSession: SparkSession,
+                    eventsDS: Dataset[Event]): DataFrame = {
+    import sparkSession.implicits._
+    // Create an instance of UDAF DeDupMultiEvent.
+    val gm = new DeDupMultiEvent
+
+    val partWindowCondn = Window.partitionBy('user_id, 'advertiser_id, 'event_type)
+      .orderBy("timestamp")
+
+    eventsDS
+      .select('timestamp, 'event_id, 'advertiser_id, 'user_id, 'event_type,
+        gm('timestamp).over(partWindowCondn).as("prev_min_time_in_minute"))
+      .filter('timestamp === 'prev_min_time_in_minute)
+      .drop('prev_min_time_in_minute)
+  }
+
+  def fetchAttributeEvents(sparkSession: SparkSession,
+                           eventsAfterDedupDF: DataFrame,
+                           impressionsDS: Dataset[Impression]): Dataset[Row] = {
+    import sparkSession.implicits._
+    val eventsAndImpressionDF = eventsAfterDedupDF
+      .select(lit(0).as("Type"), 'timestamp, 'advertiser_id, 'user_id, 'event_type)
+      .union(impressionsDS.select(lit(1).as("Type"), 'timestamp, 'advertiser_id,
+        'user_id, lit("NA").as('event_type)))
+
+    if (debugMode) {
+      eventsAndImpressionDF.printSchema()
+      println(s"Events and impressions combined count : ${eventsAndImpressionDF.count()}")
+      eventsAndImpressionDF.show(100, falseValue)
+    }
+
+    println("Marking/identifying attributed events")
+    /* Mark events which are attributed i.e.,
+    *  - Attributed event: an event that happened chronologically after an impression and is considered to be
+    * the result of that impression. The advertiser and the user of both the impression and the event
+    * have to be the same for the event to be attributable. Example: a user buying an object after
+    * seeing an ad from an advertiser.*/
+    eventsAndImpressionDF
+      .select('Type, 'timestamp, 'advertiser_id, 'user_id, 'event_type,
+        max('Type).over(Window.partitionBy('user_id, 'advertiser_id)
+          .orderBy("timestamp")).as("impression_occurred"))
+      .filter(('Type === 0).and('impression_occurred === 1))
+
+  }
+
+  def calculateCountOfEvents(sparkSession: SparkSession,
+                             markAttributeEventsDF: Dataset[Row]): DataFrame = {
+    import sparkSession.implicits._
+    markAttributeEventsDF
+      .groupBy('advertiser_id, 'event_type)
+      .agg(count('advertiser_id).as("count"))
+  }
+
+  def calculateCountOfUniqueEvents(sparkSession: SparkSession,
+                                   markAttributeEventsDF: Dataset[Row]): DataFrame = {
+    import sparkSession.implicits._
+    markAttributeEventsDF
+      .groupBy('advertiser_id, 'user_id, 'event_type)
+      .agg(lit(1).as("unique_user_event_type"))
+      .groupBy('advertiser_id, 'event_type)
+      .agg(count('unique_user_event_type).as("count"))
+
+  }
+
+  def storeDataToCsv(attributedEventsByAdvertiserDF: DataFrame,
+                     saveMode: SaveMode,
+                     outputFilePath: String): Boolean = {
+    try {
+      attributedEventsByAdvertiserDF
+        .write
+        .mode(saveMode)
+        .option("header", trueValue)
+        .csv(outputFilePath)
+      println(s"Successfully stored data to $outputFilePath")
+      true
+    } catch {
+      case genEx: Exception =>
+        println(s"Exception while storing data to $outputFilePath")
+        genEx.printStackTrace()
+        false
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    try {
+
+      var eventsPath = ""
+      var impressionsPath = ""
+      var countOfEventsOutputPath = ""
+      var countOfUniqueUsersOutputPath = ""
+      sparkConfFilePath = ""
+
+      println("Parsing input parameters")
+      println(args.length)
+      println(args.mkString(" "))
+
+      if (args.isEmpty || args.length < 4) {
+        throw new MMInvalidParameterException("missing input arguments ")
+      } else {
+
+        eventsPath = args(0)
+        impressionsPath = args(1)
+        countOfEventsOutputPath = args(2)
+        countOfUniqueUsersOutputPath = args(3)
+
+        if (args.length >= 5) {
+          sparkConfFilePath = args(4)
+        }
+
+        if (args.length >= 6) {
+          debugMode = Try(args(5).toBoolean).getOrElse(false)
+        }
+
+        if (eventsPath.isEmpty) {
+          print(s"Input arguments : ${args.mkString(" ")}")
+          throw new MMInvalidParameterException("events.csv path is missing")
+        }
+        if (impressionsPath.isEmpty) {
+          print(s"Input arguments : ${args.mkString(" ")}")
+          throw new MMInvalidParameterException("impression.csv path is missing")
+        }
+
+        if (countOfEventsOutputPath.isEmpty) {
+          print(s"Input arguments : ${args.mkString(" ")}")
+          throw new MMInvalidParameterException("count_of_events.csv path is missing")
+        }
+
+        if (countOfUniqueUsersOutputPath.isEmpty) {
+          print(s"Input arguments : ${args.mkString(" ")}")
+          throw new MMInvalidParameterException("count_of_users.csv path is missing")
+        }
+
+        println(s"Reading events from, $eventsPath")
+        println(s"Reading Impressions from, $impressionsPath")
+        println(s"Writing count_of_events to, $countOfEventsOutputPath")
+        println(s"Reading count_of_users to, $countOfUniqueUsersOutputPath")
+
+        // initialise spark session
+        logger.info("Starting Attribution App")
+        val sparkSession = SparkSession.builder()
+          //.config(getSparkAppConf)
+          .getOrCreate()
+
+        sparkSession.sparkContext.setLogLevel("ERROR")
+
+        val eventColNames = classOf[Event].getDeclaredFields.map(ea => ea.getName)
+
+        println("----------------- Attribute analysis --------------------------")
+
+        println("Reading events ....")
+        val eventsDS = loadEventsDS(sparkSession, eventsPath, eventColNames)
+        displayData(eventsDS, "Events count :")
+
+        println("Deduplication of events within minute to avoid click on an ad twice by mistake.")
+
+        val eventsAfterDedupDF = dedupEventsDS(sparkSession, eventsDS)
+        displayData(eventsAfterDedupDF, "De-duplicated events count : ")
+
+        println("Deduplication phase complete.")
+
+
+        println("Reading impressions ....")
+        val impressionColNames = classOf[Impression].getDeclaredFields.map(ea => ea.getName)
+
+        val impressionsDS = loadImpressionsDS(sparkSession, impressionsPath, impressionColNames)
+        displayData(impressionsDS, "impressions count :")
+
+        // - The count of attributed events for each advertiser, grouped by event type.
+        val markAttributeEventsDF = fetchAttributeEvents(sparkSession, eventsAfterDedupDF, impressionsDS)
+        displayData(markAttributeEventsDF, "Marked attribute events count : ")
+
+        println("Caching attributed events")
+        markAttributeEventsDF.persist()
+
+        println("Generate stats :  The count of attributed events for each advertiser, grouped by event type")
+        val attributedEventsByAdvertiserDF = calculateCountOfEvents(sparkSession, markAttributeEventsDF)
+
+        if (debugMode) {
+          attributedEventsByAdvertiserDF.printSchema()
+          println(s" The count of attributed events dataset count : ${attributedEventsByAdvertiserDF.count()}")
+        }
+        attributedEventsByAdvertiserDF.show()
+
+        println("Storing :  The count of attributed events for each advertiser, grouped by event type")
+        storeDataToCsv(attributedEventsByAdvertiserDF, SaveMode.Overwrite, countOfEventsOutputPath)
+
+        // - The count of unique users that have generated attributed events for each advertiser, grouped by event type.
+        println("Generate stats :  The count of unique users that have generated attributed events for each advertiser, " +
+          "grouped by event type.")
+        val attributedUniqueUsersByAdvertiserDF = calculateCountOfUniqueEvents(sparkSession, markAttributeEventsDF)
+
+        if (debugMode) {
+          attributedUniqueUsersByAdvertiserDF.printSchema()
+          println(s" The count of unique users that have generated attributed events " +
+            s"for each advertiser count : ${attributedUniqueUsersByAdvertiserDF.count()}")
+        }
+        attributedUniqueUsersByAdvertiserDF.show()
+
+        println("Storing :   The count of unique users that have generated attributed events for each advertiser, " +
+          "grouped by event type.")
+        storeDataToCsv(attributedUniqueUsersByAdvertiserDF, SaveMode.Overwrite, countOfUniqueUsersOutputPath)
+
+        println("----------------- Attribute analysis completed!!! --------------------------")
+        sparkSession.stop()
+      }
+    } catch {
+      case invalidParameterException: MMInvalidParameterException =>
+        usage(invalidParameterException.getMessage)
+      case genEx: Exception =>
+        println("Exception while running application.")
+        genEx.printStackTrace()
+
+    }
+  }
+
+  //  def getSparkAppConf: SparkConf = {
+  //    val sparkAppConf = new SparkConf
+  //    //Set all Spark Configs
+  //    val props = new Properties
+  //    props.load(Source.fromFile(sparkConf).bufferedReader())
+  //    props.forEach((k, v) => sparkAppConf.set(k.toString, v.toString))
+  //    sparkAppConf
+  //  }
 }
+
