@@ -65,9 +65,9 @@ i)/Users/harishkumar/data-engg-challenge-main/src/resources/data/events.csv  is 
 
 ii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/impressions.csv is impressions.csv file path
 
-iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_events.csv  is count_of_events.csv output file path
+iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/outputev  is output directory where count_of_events.csv will be store
 
-iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_uniqueusers.csv is count_of_users.csv output file path
+iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/outputusr is output directory where count_of_users.csv will be stored
 
 # Tested with 
 sbt 1.7.1
