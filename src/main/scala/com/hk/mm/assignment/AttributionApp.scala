@@ -17,7 +17,6 @@ import scala.io.Source
  */
 object AttributionApp extends Serializable {
 
-  @transient lazy val logger: Logger = Logger.getLogger(getClass.getName)
   val trueValue = true
   val falseValue = false
   var debugMode = false
@@ -58,14 +57,14 @@ object AttributionApp extends Serializable {
                      truncate: Boolean = false): Unit = {
     if (debugMode) {
       df.printSchema()
-      logger.info(s"$desc: ${df.count()}")
+      println(s"$desc: ${df.count()}")
       df.show(size, truncate)
     }
   }
 
   def usage(errorMsg: String = ""): Unit = {
-    logger.info(errorMsg)
-    logger.info("Usage : spark-submit --master local[1] data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar <Path to event.csv> <Path to impression.csv> <Path to output count events> Optional<spark conf file>")
+    println(errorMsg)
+    println("Usage : spark-submit --master local[1] data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar <Path to event.csv> <Path to impression.csv> <Path to output count events> Optional<spark conf file>")
   }
 
   def loadEventsDS(sparkSession: SparkSession,
@@ -230,7 +229,7 @@ object AttributionApp extends Serializable {
         println(s"Reading count_of_users to, $countOfUniqueUsersOutputPath")
 
         // initialise spark session
-        logger.info("Starting Attribution App")
+        println("Starting Attribution App")
         val sparkSession = SparkSession.builder()
           //.config(getSparkAppConf)
           .getOrCreate()
