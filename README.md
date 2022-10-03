@@ -49,13 +49,13 @@ sh deployAttribution.sh
 then run the below command to execute the application
 ```
 sh RunAttribution.sh /Users/harishkumar/data-engg-challenge-main/src/resources/data/events.csv  /Users/harishkumar/data-engg-challenge-main/src/resources/data/impressions.csv  \
-/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_events.csv  /Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_uniqueusers.csv
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/outputev /Users/harishkumar/data-engg-challenge-main/src/resources/data/outputusr
 ```
 
 Once the script completes we will have our output files of count_of_events.csv and count_of_uniqueusers.csv store at
 ```
-/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_events.csv 
-/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_uniqueusers.csv
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/outputev/count_of_events.csv 
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/outputusr/count_of_uniqueusers.csv
 ```
 
 Note: You can give your own events.csv and impressions.csv path and output location

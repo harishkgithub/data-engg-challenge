@@ -48,10 +48,10 @@ echo "Navigating back to runner script"
 cd src/main/Scripts/Linux_Mac/
 pwd
 echo "Please run the application wit RunAttribution.sh :
- sh RunAttribution.sh /Users/harishkumar/data-engg-challenge-main/src/resources/data/events.csv \
-  /Users/harishkumar/data-engg-challenge-main/src/resources/data/impressions.csv  \
- /Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_events.csv \
- /Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_uniqueusers.csv
+sh RunAttribution.sh /Users/harishkumar/data-engg-challenge-main/src/resources/data/events.csv  \
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/impressions.csv  \
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/outputev \
+/Users/harishkumar/data-engg-challenge-main/src/resources/data/outputusr
 "
 
 echo
