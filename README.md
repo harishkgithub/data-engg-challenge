@@ -29,9 +29,11 @@ brew install sbt
 
 ## Deploy and run script:
 
-Step 1: Download the source code from email attachment "data-engg-challenge-main.zip" and unzip it.
+Step 1: Download the source code from this git repository as "data-engg-challenge-main.zip" and unzip it.
 Open terminal and give write permissions for unzipped folder "/Users/harishkumar/data-engg-challenge-main" 
 navigate inside the unzipped folder "data-engg-challenge-main" to the Scripts directory 
+or
+we can do git clone as well
 Ex:
 ```
 chmod -R 755 /Users/harishkumar/data-engg-challenge-main/
