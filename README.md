@@ -11,9 +11,10 @@ export PATH=$PATH:$JAVA_HOME
 ```
 
 ii) Spark 3.3.0 is installed
+
 Download spark from https://spark.apache.org/downloads.html
 I used Spark 3.3.0 with "Pre-built for Apache Hadoop 3.3 and later" [spark-3.3.0-bin-hadoop3.tgz unzip it]
-"=/Users/harishkumar/spark-3.3.0-bin-hadoop3/" is unzipped spark location which contains bin folder having spark-submit script
+"/Users/harishkumar/spark-3.3.0-bin-hadoop3/" is unzipped spark location which contains bin folder having spark-submit script
 
 Set SPARK_HOME and PATH
 ```
@@ -23,7 +24,7 @@ export PATH=$PATH:$SPARK_HOME/bin
 
 iii) sbt (scala build tool) is installed
 ```
-brew install 
+brew install sbt
 ```
 
 
@@ -76,7 +77,7 @@ Hadoop 2.8.3
 Intellij 2022.2.2
 MacOS Monterey
 
-===================================================================================================================================================================================================
+========================================================================================================================
 
 # Windows users (In-Complete)  :- 
  We can use this guide to run the project on windows but this not tested and its incomplete
@@ -143,4 +144,4 @@ On success we will see output files at
 E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_events.csv 
 E:\harish\MyLab\Idea-workspace\data-engg-challenge_mm\src\resources\count_of_users.csv
 
-===================================================================================================================================================================================================
+========================================================================================================================
