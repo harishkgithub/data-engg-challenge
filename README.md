@@ -27,7 +27,6 @@ iii) sbt (scala build tool) is installed
 brew install sbt
 ```
 
-
 ## Deploy and run script:
 
 Step 1: Download the source code from email attachment "data-engg-challenge-main.zip" and unzip it.
