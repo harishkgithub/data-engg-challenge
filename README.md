@@ -1,5 +1,5 @@
 # data-engg-challenge
-Coding challenge with Apache spark, scala
+Documentation for launching a development environment and running the application.
 
 # Linux/Mac users :-
 ## Prerequisite installation :
@@ -69,7 +69,7 @@ iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_
 
 iii)/Users/harishkumar/data-engg-challenge-main/src/resources/data/output/count_of_uniqueusers.csv is count_of_users.csv output file path
 
-# Tested on
+# Tested with 
 sbt 1.7.1
 
 Java 1.8.0_341
