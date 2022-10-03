@@ -58,14 +58,14 @@ object AttributionApp extends Serializable {
                      truncate: Boolean = false): Unit = {
     if (debugMode) {
       df.printSchema()
-      println(s"$desc: ${df.count()}")
+      logger.info(s"$desc: ${df.count()}")
       df.show(size, truncate)
     }
   }
 
   def usage(errorMsg: String = ""): Unit = {
-    println(errorMsg)
-    println("Usage : spark-submit --master local[1] data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar <Path to event.csv> <Path to impression.csv> <Path to output count events> debugflag")
+    logger.info(errorMsg)
+    logger.info("Usage : spark-submit --master local[1] data-engg-challenge_2.12-0.1.0-SNAPSHOT.jar <Path to event.csv> <Path to impression.csv> <Path to output count events> Optional<spark conf file>")
   }
 
   def loadEventsDS(sparkSession: SparkSession,
@@ -198,11 +198,11 @@ object AttributionApp extends Serializable {
         countOfUniqueUsersOutputPath = args(3)
 
         if (args.length >= 5) {
-          sparkConfFilePath = args(5)
+          sparkConfFilePath = args(4)
         }
 
         if (args.length >= 6) {
-          debugMode = Try(args(6).toBoolean).getOrElse(false)
+          debugMode = Try(args(5).toBoolean).getOrElse(false)
         }
 
         if (eventsPath.isEmpty) {
